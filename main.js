@@ -12,7 +12,6 @@ let CAR_COUNT = 1
 
 import Car from './car.js'
 
-let CARS = []
 let LANES = {}
 for (let i = 0; i < NUM_LANES; i++) {
   LANES[i] = []
@@ -21,7 +20,6 @@ for (let i = 0; i < NUM_LANES; i++) {
 document.addEventListener('DOMContentLoaded', main)
 
 function reset(ctx) {
-  CARS = []
   LANES = {}
   for (let i = 0; i < NUM_LANES; i++) {
     LANES[i] = []
@@ -68,25 +66,24 @@ function draw(ctx) {
   ctx.fillRect(2 * WIDTH / 4, 0, 1, HEIGHT)
   ctx.fillRect(3 * WIDTH / 4, 0, 1, HEIGHT)
 
-  CARS.forEach(car => drawCar(ctx, car))
+  iterateCar(car => drawCar(ctx, car))
 }
 
 function generateCar(yy) {
   let {car, lane} = randomCar(yy)
   LANES[lane].push(car)
-  CARS.push(car)
 }
 
 function tick(ctx, isForced) {
   if (!isForced && !IS_PLAYING) return
 
-  console.log('tick')
   iterateBumperToBumper((car1, car2) => {
-    if (car2) {
-      let distance = car1.yy - car2.yy
+    let initialYY = car1.yy
+    car1.tick()
 
-      let initialYY = car1.yy
-      car1.tick()
+    if (car2) {
+      let distance = Math.abs(car1.yy - car2.yy)
+
 
       if (car2 && distance < (CAR_HEIGHT + 8)) {
         car1.yy = initialYY
@@ -100,8 +97,8 @@ function tick(ctx, isForced) {
     }
   })
 
-  CARS = CARS.filter(car => !car.isToBeDeleted) 
-  draw(ctx, CARS)
+  filterCars(car => !car.isToBeDeleted) 
+  draw(ctx)
 }
 
 function drawCar(ctx, car) {
@@ -148,7 +145,7 @@ function dedupeLane(laneKey) {
     let thisCar = lane[i]
     let nextCar = lane[i + 1]
 
-    let distance = thisCar.yy - nextCar.yy
+    let distance = Math.abs(thisCar.yy - nextCar.yy)
     if ((thisCar.yy - nextCar.yy) < CAR_HEIGHT) {
       thisCar.isToBeDeleted = true
     }
@@ -170,5 +167,15 @@ function iterateBumperToBumper(cb) {
       let nextCar = lane[i + 1]
       cb(thisCar, nextCar, i, i + 1)
     }
+  })
+}
+
+function iterateCar(cb) {
+  iterateBumperToBumper(car => cb(car))
+}
+
+function filterCars(test) {
+  iterateOverCarsLaneByLane((lane, laneKey) => {
+    LANES[laneKey] = lane.filter(test)
   })
 }
