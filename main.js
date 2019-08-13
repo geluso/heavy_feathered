@@ -142,8 +142,10 @@ function randomWalk() {
 }
 
 function drawCar(ctx, car) {
-  ctx.fillStyle = 'yellow'
+  ctx.fillStyle = car.color
   ctx.fillRect(car.xx - 10, car.yy, CAR_WIDTH, CAR_HEIGHT)
+
+  ctx.fillStyle = 'black'
   ctx.fillText('' + car.number + '\n' + car.laneKey, car.xx + 10, car.yy)
 
   if (car.isBraking) {
@@ -163,7 +165,12 @@ function randomCar(yy) {
   let maxSpeed = 82
   let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / SPEED_FACTOR
 
-  const car = new Car(xx, yy, speed)
+  let rr = Math.floor(255 * Math.random())
+  let gg = Math.floor(255 * Math.random())
+  let bb = Math.floor(255 * Math.random())
+  let color = `rgb(${rr},${gg},${bb})`
+
+  const car = new Car(xx, yy, speed, color)
   car.laneKey = laneKey
   car.number = CAR_COUNT++
   return {car, laneKey}
