@@ -5,6 +5,10 @@ const HEIGHT = 600
 
 const CAR_WIDTH = 20
 const CAR_HEIGHT = 30
+const MIN_DISTANCE = CAR_HEIGHT + 8
+
+const SPEED_FACTOR = 20
+
 const NUM_INITIAL_CARS = 30
 
 let IS_PLAYING = false
@@ -70,8 +74,18 @@ function draw(ctx) {
 }
 
 function generateCar(yy) {
-  let {car, lane} = randomCar(yy)
-  LANES[lane].push(car)
+  let {car, laneKey} = randomCar(yy)
+
+  let lane = LANES[laneKey]
+  let lastCar = lane[lane.length - 1]
+  if (lastCar) {
+    let distance = Math.abs(car.yy - lastCar.yy)
+    if (distance > MIN_DISTANCE) {
+      lane.push(car)
+    }
+  } else {
+    lane.push(car)
+  }
 }
 
 function tick(ctx, isForced) {
@@ -81,23 +95,29 @@ function tick(ctx, isForced) {
     let initialYY = car1.yy
     car1.tick()
 
+    console.log('car12', car1.number, car2 && car2.number, car1.yy, car2 && car2.yy)
+
+    // is the car so close to another it should break?
     if (car2) {
       let distance = Math.abs(car1.yy - car2.yy)
-
-
-      if (car2 && distance < (CAR_HEIGHT + 8)) {
+      if (distance < MIN_DISTANCE) {
         car1.yy = initialYY
         car1.isBraking = true
       }
     }
 
+    // has the car gone off the top of the screen?
     if (car1.yy < -CAR_HEIGHT) {
       car1.isToBeDeleted = true
-      generateCar(HEIGHT - CAR_HEIGHT)
     }
   })
 
+  if (totalCars() < NUM_INITIAL_CARS) {
+    generateCar(HEIGHT - CAR_HEIGHT)
+  }   
+
   filterCars(car => !car.isToBeDeleted) 
+
   draw(ctx)
 }
 
@@ -121,18 +141,18 @@ function randomCar(yy) {
     4 * WIDTH / 4 - HALF_LANE,
   ]
 
-  let lane = Math.floor(lanesX.length * Math.random())
-  let xx = lanesX[lane]
+  let laneKey = Math.floor(lanesX.length * Math.random())
+  let xx = lanesX[laneKey]
   yy = yy || HEIGHT * Math.random()
 
   // have the car drive between 55-80 MPH scaled to where 10 represents 60 MPH
   let minSpeed = 55
   let maxSpeed = 82
-  let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / 10
+  let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / SPEED_FACTOR
 
   const car = new Car(xx, yy, speed)
   car.number = CAR_COUNT++
-  return {car, lane}
+  return {car, laneKey}
 }
 
 function compareLanePosition(car1, car2) {
@@ -146,7 +166,7 @@ function dedupeLane(laneKey) {
     let nextCar = lane[i + 1]
 
     let distance = Math.abs(thisCar.yy - nextCar.yy)
-    if ((thisCar.yy - nextCar.yy) < CAR_HEIGHT) {
+    if (distance < CAR_HEIGHT) {
       thisCar.isToBeDeleted = true
     }
   }
@@ -162,10 +182,10 @@ function iterateOverCarsLaneByLane(cb) {
 
 function iterateBumperToBumper(cb) {
   iterateOverCarsLaneByLane((lane, laneKey) => {
-    for (let i = 0; i < lane.length; i++) {
+    for (let i = lane.length - 1; i >= 0; i--) {
       let thisCar = lane[i]
-      let nextCar = lane[i + 1]
-      cb(thisCar, nextCar, i, i + 1)
+      let nextCar = lane[i - 1]
+      cb(thisCar, nextCar, i, i - 1)
     }
   })
 }
@@ -178,4 +198,10 @@ function filterCars(test) {
   iterateOverCarsLaneByLane((lane, laneKey) => {
     LANES[laneKey] = lane.filter(test)
   })
+}
+
+function totalCars() {
+  let sum = 0
+  iterateOverCarsLaneByLane(lane => sum += lane.length)
+  return sum
 }
