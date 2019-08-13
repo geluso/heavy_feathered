@@ -17,7 +17,9 @@ const MIN_DISTANCE = CAR_HEIGHT + 8
 
 const SPEED_FACTOR = 20
 
-const NUM_INITIAL_CARS = 12
+const SCALE = 5
+let NUM_INITIAL_CARS = 4
+const PERCENT_LANE_CHANGE = .8
 
 let IS_PLAYING = false
 let CAR_COUNT = 1
@@ -62,6 +64,7 @@ function main() {
   reset(ctx)
   document.addEventListener('keypress', () => togglePlayback(ctx))
 
+  setInterval(randomWalk, 1000) 
   setInterval(() => tick(ctx), 1000 / 60)
 }
 
@@ -116,7 +119,7 @@ function tick(ctx, isForced) {
   
         car2.speed *= 1.2
       }
-    } else if (!car1.isMakingTurn && Math.random() < .01) {
+    } else if (!car1.isMakingTurn && Math.random() < PERCENT_LANE_CHANGE) {
       makeTurn(car1)
     }
   })
@@ -128,6 +131,14 @@ function tick(ctx, isForced) {
   filterCars(car => !car.isToBeDeleted) 
 
   draw(ctx)
+}
+
+function randomWalk() {
+  let scale = Math.random() * SCALE
+  let upOrDown = Math.random() < .5 ? 1 : -1
+  NUM_INITIAL_CARS = Math.max(1, NUM_INITIAL_CARS + upOrDown * scale)
+
+  console.log('random', NUM_INITIAL_CARS)
 }
 
 function drawCar(ctx, car) {
@@ -258,7 +269,7 @@ function makeTurn(car) {
 function isSafe(car, newLaneKey) {
   for (let otherCar of LANES[newLaneKey]) {
     let distance = Math.abs(car.yy - otherCar.yy)
-    if (distance < MIN_DISTANCE * 1.2) {
+    if (distance < MIN_DISTANCE * 1.6) {
       return false
     }
   }
