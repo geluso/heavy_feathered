@@ -10,7 +10,6 @@ const LANES_X = [
   4 * WIDTH / 4 - HALF_LANE,
 ]
 
-
 const CAR_WIDTH = 20
 const CAR_HEIGHT = 30
 const MIN_DISTANCE = CAR_HEIGHT + 8
@@ -18,7 +17,8 @@ const MIN_DISTANCE = CAR_HEIGHT + 8
 const SPEED_FACTOR = 20
 
 const SCALE = 5
-let NUM_INITIAL_CARS = 4
+const ENABLE_RANDOM_WALK = false
+let ROAD_CAPACITY = 18
 const PERCENT_LANE_CHANGE = .8
 
 let IS_PLAYING = false
@@ -39,7 +39,7 @@ function reset(ctx) {
     LANES[i] = []
   }
 
-  for (let i = 0; i < NUM_INITIAL_CARS; i++) {
+  for (let i = 0; i < ROAD_CAPACITY; i++) {
     generateCar()
   }
 
@@ -64,7 +64,7 @@ function main() {
   reset(ctx)
   document.addEventListener('keypress', () => togglePlayback(ctx))
 
-  setInterval(randomWalk, 1000) 
+  if (ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
   setInterval(() => tick(ctx), 1000 / 60)
 }
 
@@ -109,7 +109,8 @@ function tick(ctx, isForced) {
 
     // has the car gone off the top of the screen?
     if (car1.yy < -CAR_HEIGHT) {
-      car1.isToBeDeleted = true
+      console.log('off top', car1.yy, car1.speed, car1.laneKey, car1.trail.length)
+      car1.isToBeDeleted = 'off top of screen'
     } else if (car2) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
@@ -124,11 +125,13 @@ function tick(ctx, isForced) {
     }
   })
 
-  if (totalCars() < NUM_INITIAL_CARS) {
-    generateCar(HEIGHT - CAR_HEIGHT)
+  if (totalCars() < ROAD_CAPACITY) {
+    generateCar(HEIGHT + CAR_HEIGHT)
   }   
 
-  filterCars(car => !car.isToBeDeleted) 
+  filterCars(car => {
+    return !car.isToBeDeleted
+  }) 
 
   draw(ctx)
 }
@@ -136,9 +139,7 @@ function tick(ctx, isForced) {
 function randomWalk() {
   let scale = Math.random() * SCALE
   let upOrDown = Math.random() < .5 ? 1 : -1
-  NUM_INITIAL_CARS = Math.max(1, NUM_INITIAL_CARS + upOrDown * scale)
-
-  console.log('random', NUM_INITIAL_CARS)
+  ROAD_CAPACITY = Math.max(1, ROAD_CAPACITY + upOrDown * scale)
 }
 
 function drawCar(ctx, car) {
@@ -181,7 +182,7 @@ function dedupeLane(laneKey) {
 
     let distance = Math.abs(thisCar.yy - nextCar.yy)
     if (distance < CAR_HEIGHT) {
-      thisCar.isToBeDeleted = true
+      thisCar.isToBeDeleted = 'deduping lane'
     }
   }
 
@@ -269,7 +270,7 @@ function makeTurn(car) {
 function isSafe(car, newLaneKey) {
   for (let otherCar of LANES[newLaneKey]) {
     let distance = Math.abs(car.yy - otherCar.yy)
-    if (distance < MIN_DISTANCE * 1.6) {
+    if (distance < MIN_DISTANCE * 1.2) {
       return false
     }
   }
