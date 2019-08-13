@@ -3,13 +3,21 @@ const NUM_LANES = 4
 const HALF_LANE = WIDTH / NUM_LANES / 2
 const HEIGHT = 600
 
+const LANES_X = [
+  1 * WIDTH / 4 - HALF_LANE,
+  2 * WIDTH / 4 - HALF_LANE,
+  3 * WIDTH / 4 - HALF_LANE,
+  4 * WIDTH / 4 - HALF_LANE,
+]
+
+
 const CAR_WIDTH = 20
 const CAR_HEIGHT = 30
 const MIN_DISTANCE = CAR_HEIGHT + 8
 
 const SPEED_FACTOR = 20
 
-const NUM_INITIAL_CARS = 30
+const NUM_INITIAL_CARS = 12
 
 let IS_PLAYING = false
 let CAR_COUNT = 1
@@ -94,21 +102,22 @@ function tick(ctx, isForced) {
   iterateBumperToBumper((car1, car2) => {
     let initialYY = car1.yy
     car1.tick()
-
-    console.log('car12', car1.number, car2 && car2.number, car1.yy, car2 && car2.yy)
-
-    // is the car so close to another it should break?
-    if (car2) {
-      let distance = Math.abs(car1.yy - car2.yy)
-      if (distance < MIN_DISTANCE) {
-        car1.yy = initialYY
-        car1.isBraking = true
-      }
-    }
+    car1.isBraking = false
 
     // has the car gone off the top of the screen?
     if (car1.yy < -CAR_HEIGHT) {
       car1.isToBeDeleted = true
+    } else if (car2) {
+      // is the car so close to another it should break?
+      let distance = Math.abs(car1.yy - car2.yy)
+      if (distance < MIN_DISTANCE) {
+        car1.yy = initialYY + car1.speed / 2
+        car1.isBraking = true
+  
+        car2.speed *= 1.2
+      }
+    } else if (!car1.isMakingTurn && Math.random() < .01) {
+      makeTurn(car1)
     }
   })
 
@@ -134,15 +143,8 @@ function drawCar(ctx, car) {
 }
 
 function randomCar(yy) {
-  const lanesX = [
-    1 * WIDTH / 4 - HALF_LANE,
-    2 * WIDTH / 4 - HALF_LANE,
-    3 * WIDTH / 4 - HALF_LANE,
-    4 * WIDTH / 4 - HALF_LANE,
-  ]
-
-  let laneKey = Math.floor(lanesX.length * Math.random())
-  let xx = lanesX[laneKey]
+  let laneKey = Math.floor(LANES_X.length * Math.random())
+  let xx = LANES_X[laneKey]
   yy = yy || HEIGHT * Math.random()
 
   // have the car drive between 55-80 MPH scaled to where 10 represents 60 MPH
@@ -151,6 +153,7 @@ function randomCar(yy) {
   let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / SPEED_FACTOR
 
   const car = new Car(xx, yy, speed)
+  car.laneKey = laneKey
   car.number = CAR_COUNT++
   return {car, laneKey}
 }
@@ -204,4 +207,47 @@ function totalCars() {
   let sum = 0
   iterateOverCarsLaneByLane(lane => sum += lane.length)
   return sum
+}
+
+function makeTurn(car) {
+  let isLeft = Math.random() < .7
+
+  // don't change lanes off the road
+  if (isLeft && car.laneKey === 0) return
+  if (!isLeft && car.laneKey === LANES.length - 1) return
+
+  car.isMakingTurn = true
+
+  let newLaneKey = car.laneKey - 1
+  let dx = -4
+  if (!isLeft) {
+    newLaneKey = car.laneKey + 1
+    dx *= -1
+  }
+
+  let timerId = setInterval(() => {
+    car.xx += dx
+    let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
+    if (isDone) {
+      car.isMakingTurn = false
+      car.xx = LANES_X[newLaneKey]
+      clearInterval(timerId)
+
+      let oldLane = LANES[car.laneKey]
+      let newLane = LANES[newLaneKey]
+      car.newLaneKey = newLaneKey
+
+      let index = oldLane.indexOf(car) 
+      oldLane.splice(index, 1)
+
+      let insertIndex = -1
+      newLane.find((el, index, aa) => {
+        insertIndex++
+        if (el.yy < car.yy && ((index + 1) < aa.length) && car.yy < aa[index + 1].yy) {
+          return true
+        }
+      })
+      newLane.splice(insertIndex, 0, car)
+    }
+  }, 1000 / 30) 
 }
