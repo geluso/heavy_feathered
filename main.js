@@ -155,6 +155,24 @@ function drawCar(ctx, car) {
   ctx.fillStyle = 'rgb(34,192,240)'
   ctx.fillRect(car.xx - CAR_WIDTH / 2 + 2, car.yy + 2, CAR_WIDTH - 4, 6)
 
+  // left headlight
+  ctx.fillStyle = 'white'
+  ctx.beginPath()
+  ctx.moveTo(car.xx - CAR_WIDTH / 2 + 4, car.yy + 4)
+  ctx.lineTo(car.xx - CAR_WIDTH / 2 + 4 - 5, car.yy - 10 + 4)
+  ctx.lineTo(car.xx - CAR_WIDTH / 2 + 4 + 5, car.yy - 10 + 4)
+  ctx.closePath()
+  ctx.fill()
+
+  // right headlight
+  ctx.fillStyle = 'white'
+  ctx.beginPath()
+  ctx.moveTo(car.xx + CAR_WIDTH / 2 - 4, car.yy + 4)
+  ctx.lineTo(car.xx + CAR_WIDTH / 2 - 4 - 5, car.yy - 10 + 4)
+  ctx.lineTo(car.xx + CAR_WIDTH / 2 - 4 + 5, car.yy - 10 + 4)
+  ctx.closePath()
+  ctx.fill()
+
   if (car.isBraking || car.isDisplayingBradking) {
     ctx.fillStyle = 'red'
     ctx.fillRect(car.xx - CAR_WIDTH / 2,                car.yy + CAR_HEIGHT - 3, 3, 3)
