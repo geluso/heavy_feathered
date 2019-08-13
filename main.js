@@ -7,6 +7,8 @@ const CAR_WIDTH = 20
 const CAR_HEIGHT = 30
 const NUM_INITIAL_CARS = 30
 
+let CAR_COUNT = 1
+
 import Car from './car.js'
 
 let CARS = []
@@ -23,7 +25,9 @@ function main() {
 
   for (let key in LANES) {
     LANES[key].sort(compareLanePosition)  
+    dedupeLane(key)
   }
+
 
   let canvas = document.getElementById('glass')
   let ctx = canvas.getContext('2d')
@@ -35,6 +39,9 @@ function main() {
   ctx.height = HEIGHT
 
   tick(ctx);
+
+  document.addEventListener('keypress', () => tick(ctx))
+
   return;
   setInterval(() => tick(ctx), 1000 / 60)
 }
@@ -65,13 +72,13 @@ function tick(ctx) {
     }
   })
 
-  CARS = CARS.filter(car => car.yy > -CAR_HEIGHT) 
-
+  CARS = CARS.filter(car => !car.isToBeDeleted && car.yy > -CAR_HEIGHT) 
   draw(ctx, CARS)
 }
 
 function drawCar(ctx, car) {
   ctx.fillRect(car.xx - 10, car.yy, CAR_WIDTH, CAR_HEIGHT)
+  ctx.fillText('' + car.number, car.xx + 10, car.yy)
 }
 
 function randomCar(yy) {
@@ -92,9 +99,29 @@ function randomCar(yy) {
   let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / 10
 
   const car = new Car(xx, yy, speed)
+  car.number = CAR_COUNT++
   return {car, lane}
 }
 
 function compareLanePosition(car1, car2) {
   return car2.yy - car1.yy
+}
+
+function dedupeLane(laneKey) {
+  let lane = LANES[laneKey]
+  console.log('lane was', lane.length)
+  for (let i = 0; i < lane.length - 1; i++) {
+    let thisCar = lane[i]
+    let nextCar = lane[i + 1]
+
+    let distance = thisCar.yy - nextCar.yy
+    if ((thisCar.yy - nextCar.yy) < CAR_HEIGHT) {
+      thisCar.isToBeDeleted = true
+    }
+    console.log('removed?', thisCar.number, thisCar.isToBeDeleted, 'distance', distance)
+  }
+
+  LANES[laneKey] = lane.filter(car => !car.isToBeDeleted)
+  console.log('lane now', LANES[laneKey].length)
+  console.log('')
 }
