@@ -109,7 +109,6 @@ function tick(ctx, isForced) {
 
     // has the car gone off the top of the screen?
     if (car1.yy < -CAR_HEIGHT) {
-      console.log('off top', car1.yy, car1.speed, car1.laneKey)
       car1.isToBeDeleted = 'off top of screen'
     } else if (car2) {
       // is the car so close to another it should break?
@@ -145,7 +144,7 @@ function randomWalk() {
 function drawCar(ctx, car) {
   ctx.fillStyle = 'yellow'
   ctx.fillRect(car.xx - 10, car.yy, CAR_WIDTH, CAR_HEIGHT)
-  ctx.fillText('' + car.number, car.xx + 10, car.yy)
+  ctx.fillText('' + car.number + '\n' + car.laneKey, car.xx + 10, car.yy)
 
   if (car.isBraking) {
     ctx.fillStyle = 'red'
@@ -249,7 +248,7 @@ function makeTurn(car) {
 
       let oldLane = LANES[car.laneKey]
       let newLane = LANES[newLaneKey]
-      car.newLaneKey = newLaneKey
+      car.laneKey = newLaneKey
 
       let index = oldLane.indexOf(car) 
       oldLane.splice(index, 1)

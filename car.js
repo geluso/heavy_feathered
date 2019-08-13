@@ -6,6 +6,7 @@ export default class Car {
     this.speed = speed || 1
 
     this.isBraking = false
+    this.history = []
   }
 
   tick() {
