@@ -152,6 +152,9 @@ function drawCar(ctx, car) {
   ctx.fillStyle = 'black'
   ctx.fillText('' + car.number + '\n' + car.laneKey, car.xx + 10, car.yy)
 
+  ctx.fillStyle = 'rgb(34,192,240)'
+  ctx.fillRect(car.xx - CAR_WIDTH / 2 + 2, car.yy + 2, CAR_WIDTH - 4, 6)
+
   if (car.isBraking || car.isDisplayingBradking) {
     ctx.fillStyle = 'red'
     ctx.fillRect(car.xx - CAR_WIDTH / 2,                car.yy + CAR_HEIGHT - 3, 3, 3)
