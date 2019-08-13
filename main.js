@@ -7,6 +7,7 @@ const CAR_WIDTH = 20
 const CAR_HEIGHT = 30
 const NUM_INITIAL_CARS = 30
 
+let IS_PLAYING = false
 let CAR_COUNT = 1
 
 import Car from './car.js'
@@ -18,7 +19,14 @@ for (let i = 0; i < NUM_LANES; i++) {
 }
 
 document.addEventListener('DOMContentLoaded', main)
-function main() {
+
+function reset(ctx) {
+  CARS = []
+  LANES = {}
+  for (let i = 0; i < NUM_LANES; i++) {
+    LANES[i] = []
+  }
+
   for (let i = 0; i < NUM_INITIAL_CARS; i++) {
     generateCar()
   }
@@ -28,6 +36,10 @@ function main() {
     dedupeLane(key)
   })
 
+  tick(ctx, true);
+}
+
+function main() {
   let canvas = document.getElementById('glass')
   let ctx = canvas.getContext('2d')
 
@@ -37,12 +49,14 @@ function main() {
   ctx.width = WIDTH
   ctx.height = HEIGHT
 
-  tick(ctx);
+  reset(ctx)
+  document.addEventListener('keypress', () => togglePlayback(ctx))
 
-  document.addEventListener('keypress', () => tick(ctx))
-
-  return;
   setInterval(() => tick(ctx), 1000 / 60)
+}
+
+function togglePlayback(ctx) {
+  IS_PLAYING = !IS_PLAYING
 }
 
 function draw(ctx) {
@@ -63,17 +77,21 @@ function generateCar(yy) {
   CARS.push(car)
 }
 
-function tick(ctx) {
+function tick(ctx, isForced) {
+  if (!isForced && !IS_PLAYING) return
+
   console.log('tick')
   iterateBumperToBumper((car1, car2) => {
-    let distance = car1.yy - car2.yy
+    if (car2) {
+      let distance = car1.yy - car2.yy
 
-    let initialYY = car1.yy
-    car1.tick()
+      let initialYY = car1.yy
+      car1.tick()
 
-    if (distance < (CAR_HEIGHT + 2)) {
-      car1.yy = initialYY
-      car1.isBraking = true
+      if (car2 && distance < (CAR_HEIGHT + 8)) {
+        car1.yy = initialYY
+        car1.isBraking = true
+      }
     }
 
     if (car1.yy < -CAR_HEIGHT) {
@@ -147,7 +165,7 @@ function iterateOverCarsLaneByLane(cb) {
 
 function iterateBumperToBumper(cb) {
   iterateOverCarsLaneByLane((lane, laneKey) => {
-    for (let i = 0; i < lane.length - 1; i++) {
+    for (let i = 0; i < lane.length; i++) {
       let thisCar = lane[i]
       let nextCar = lane[i + 1]
       cb(thisCar, nextCar, i, i + 1)
