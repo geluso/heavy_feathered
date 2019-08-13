@@ -23,11 +23,10 @@ function main() {
     generateCar()
   }
 
-  for (let key in LANES) {
-    LANES[key].sort(compareLanePosition)  
+  iterateOverCarsLaneByLane((lane, key) => {
+    lane.sort(compareLanePosition)  
     dedupeLane(key)
-  }
-
+  })
 
   let canvas = document.getElementById('glass')
   let ctx = canvas.getContext('2d')
@@ -65,20 +64,38 @@ function generateCar(yy) {
 }
 
 function tick(ctx) {
-  CARS.forEach(car => {
-    car.tick()
-    if (car.yy < -CAR_HEIGHT) {
+  console.log('tick')
+  iterateBumperToBumper((car1, car2) => {
+    let distance = car1.yy - car2.yy
+
+    let initialYY = car1.yy
+    car1.tick()
+
+    if (distance < (CAR_HEIGHT + 2)) {
+      car1.yy = initialYY
+      car1.isBraking = true
+    }
+
+    if (car1.yy < -CAR_HEIGHT) {
+      car1.isToBeDeleted = true
       generateCar(HEIGHT - CAR_HEIGHT)
     }
   })
 
-  CARS = CARS.filter(car => !car.isToBeDeleted && car.yy > -CAR_HEIGHT) 
+  CARS = CARS.filter(car => !car.isToBeDeleted) 
   draw(ctx, CARS)
 }
 
 function drawCar(ctx, car) {
+  ctx.fillStyle = 'yellow'
   ctx.fillRect(car.xx - 10, car.yy, CAR_WIDTH, CAR_HEIGHT)
   ctx.fillText('' + car.number, car.xx + 10, car.yy)
+
+  if (car.isBraking) {
+    ctx.fillStyle = 'red'
+    ctx.fillRect(car.xx - CAR_WIDTH / 2,                car.yy + CAR_HEIGHT - 3, 3, 3)
+    ctx.fillRect(car.xx - CAR_WIDTH / 2+ CAR_WIDTH - 3, car.yy + CAR_HEIGHT - 3, 3, 3)
+  }
 }
 
 function randomCar(yy) {
@@ -109,7 +126,6 @@ function compareLanePosition(car1, car2) {
 
 function dedupeLane(laneKey) {
   let lane = LANES[laneKey]
-  console.log('lane was', lane.length)
   for (let i = 0; i < lane.length - 1; i++) {
     let thisCar = lane[i]
     let nextCar = lane[i + 1]
@@ -118,10 +134,23 @@ function dedupeLane(laneKey) {
     if ((thisCar.yy - nextCar.yy) < CAR_HEIGHT) {
       thisCar.isToBeDeleted = true
     }
-    console.log('removed?', thisCar.number, thisCar.isToBeDeleted, 'distance', distance)
   }
 
   LANES[laneKey] = lane.filter(car => !car.isToBeDeleted)
-  console.log('lane now', LANES[laneKey].length)
-  console.log('')
+}
+
+function iterateOverCarsLaneByLane(cb) {
+  for (let key in LANES) {
+    cb(LANES[key], key)
+  }
+}
+
+function iterateBumperToBumper(cb) {
+  iterateOverCarsLaneByLane((lane, laneKey) => {
+    for (let i = 0; i < lane.length - 1; i++) {
+      let thisCar = lane[i]
+      let nextCar = lane[i + 1]
+      cb(thisCar, nextCar, i, i + 1)
+    }
+  })
 }
