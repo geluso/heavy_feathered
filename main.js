@@ -1,7 +1,7 @@
 const WIDTH = 200
 const NUM_LANES = 4
 const HALF_LANE = WIDTH / NUM_LANES / 2
-const HEIGHT = 600
+const HEIGHT = 780
 
 const LANES_X = [
   1 * WIDTH / 4 - HALF_LANE,
@@ -109,7 +109,7 @@ function tick(ctx, isForced) {
 
     // has the car gone off the top of the screen?
     if (car1.yy < -CAR_HEIGHT) {
-      console.log('off top', car1.yy, car1.speed, car1.laneKey, car1.trail.length)
+      console.log('off top', car1.yy, car1.speed, car1.laneKey)
       car1.isToBeDeleted = 'off top of screen'
     } else if (car2) {
       // is the car so close to another it should break?

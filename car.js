@@ -6,12 +6,10 @@ export default class Car {
     this.speed = speed || 1
 
     this.isBraking = false
-    this.trail = []
   }
 
   tick() {
     this.isBraking = false
     this.yy -= this.speed    
-    this.trail.push(this.yy)
   }
 }
