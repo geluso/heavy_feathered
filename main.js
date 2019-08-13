@@ -212,12 +212,6 @@ function totalCars() {
 function makeTurn(car) {
   let isLeft = Math.random() < .7
 
-  // don't change lanes off the road
-  if (isLeft && car.laneKey === 0) return
-  if (!isLeft && car.laneKey === LANES.length - 1) return
-
-  car.isMakingTurn = true
-
   let newLaneKey = car.laneKey - 1
   let dx = -4
   if (!isLeft) {
@@ -225,6 +219,14 @@ function makeTurn(car) {
     dx *= -1
   }
 
+  // don't change lanes off the road
+  if (newLaneKey < 0) return
+  if (newLaneKey >= Object.keys(LANES).length) return
+
+  // check to see if there's a car in the other lane
+  if (!isSafe(car, newLaneKey)) return
+
+  car.isMakingTurn = true
   let timerId = setInterval(() => {
     car.xx += dx
     let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
@@ -250,4 +252,15 @@ function makeTurn(car) {
       newLane.splice(insertIndex, 0, car)
     }
   }, 1000 / 30) 
+}
+
+// msmog: mirror, signal, mirror, over-the-shoulder, go
+function isSafe(car, newLaneKey) {
+  for (let otherCar of LANES[newLaneKey]) {
+    let distance = Math.abs(car.yy - otherCar.yy)
+    if (distance < MIN_DISTANCE * 1.2) {
+      return false
+    }
+  }
+  return true
 }
