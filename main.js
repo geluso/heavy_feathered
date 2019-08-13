@@ -116,6 +116,10 @@ function tick(ctx, isForced) {
       if (distance < MIN_DISTANCE) {
         car1.yy = initialYY + car1.speed / 2
         car1.isBraking = true
+        car1.isDisplayingBradking = true
+        setTimeout(() => {
+          car1.isDisplayingBradking = false
+        }, 600)
   
         car2.speed *= 1.2
       }
@@ -148,7 +152,7 @@ function drawCar(ctx, car) {
   ctx.fillStyle = 'black'
   ctx.fillText('' + car.number + '\n' + car.laneKey, car.xx + 10, car.yy)
 
-  if (car.isBraking) {
+  if (car.isBraking || car.isDisplayingBradking) {
     ctx.fillStyle = 'red'
     ctx.fillRect(car.xx - CAR_WIDTH / 2,                car.yy + CAR_HEIGHT - 3, 3, 3)
     ctx.fillRect(car.xx - CAR_WIDTH / 2+ CAR_WIDTH - 3, car.yy + CAR_HEIGHT - 3, 3, 3)
