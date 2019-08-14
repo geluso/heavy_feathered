@@ -1,7 +1,7 @@
 const WIDTH = 200
 const NUM_LANES = 4
 const HALF_LANE = WIDTH / NUM_LANES / 2
-const HEIGHT = 780
+const HEIGHT = 700
 
 const LANES_X = [
   1 * WIDTH / 4 - HALF_LANE,
@@ -25,6 +25,7 @@ let IS_PLAYING = false
 let CAR_COUNT = 1
 
 import Car from './car.js'
+import Util from './util.js'
 
 let LANES = {}
 for (let i = 0; i < NUM_LANES; i++) {
@@ -62,10 +63,45 @@ function main() {
   ctx.height = HEIGHT
 
   reset(ctx)
-  document.addEventListener('keypress', () => togglePlayback(ctx))
+  document.addEventListener('keypress', (ev) => {
+    if (ev.target.id !== 'tick') {
+      togglePlayback(ctx)
+    }
+  })
+  document.getElementById('tick').addEventListener('click', () => tick(ctx, true))
+  document.addEventListener('mousedown', ev => click(ev, ctx))
+
 
   if (ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
   setInterval(() => tick(ctx), 1000 / 60)
+}
+
+function click(ev, ctx) {
+  const rect = ev.target.getBoundingClientRect();
+  const xx = ev.clientX - rect.left;
+  const yy = ev.clientY - rect.top;
+  selectCar(ctx, xx, yy)
+}
+
+function selectCar(ctx, xx, yy) {
+  let car = getClosestCar(xx, yy)
+  if (!car) return
+  car.isSpecial = !car.isSpecial
+
+  draw(ctx, true)
+}
+
+function getClosestCar(xx, yy) {
+  let minDistance = null
+  let closestCar = null
+  iterateCars(car => {
+    let distance = Util.distance(xx, yy, car.xx, car.yy)
+    if (!minDistance || distance < minDistance) {
+      minDistance = distance
+      closestCar = car
+    }
+  })
+  return closestCar  
 }
 
 function togglePlayback(ctx) {
@@ -86,7 +122,7 @@ function draw(ctx) {
   })
 
   iterateBumperToBumper((car1, car2) => {
-    if (car1.special) {
+    if (car1.isSpecial) {
       console.log('car12 yy', car1.yy, car2 && car2.yy)
       drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
       drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
@@ -209,7 +245,7 @@ function drawCar(ctx, car) {
   ctx.fillRect(car.xx - CAR_WIDTH / 2 + 2, car.yy + 2, CAR_WIDTH - 4, 6)
 
   // left headlight
-  ctx.fillStyle = car.special ? 'yellow' : 'white'
+  ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
   ctx.moveTo(car.xx - CAR_WIDTH / 2 + 4, car.yy + 4)
   ctx.lineTo(car.xx - CAR_WIDTH / 2 + 4 - 5, car.yy - 10 + 4)
@@ -218,7 +254,7 @@ function drawCar(ctx, car) {
   ctx.fill()
 
   // right headlight
-  ctx.fillStyle = car.special ? 'yellow' : 'white'
+  ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
   ctx.moveTo(car.xx + CAR_WIDTH / 2 - 4, car.yy + 4)
   ctx.lineTo(car.xx + CAR_WIDTH / 2 - 4 - 5, car.yy - 10 + 4)
@@ -252,7 +288,7 @@ function randomCar(yy) {
   car.laneKey = laneKey
   car.number = CAR_COUNT++
 
-  car.special = Math.random() < .1
+  car.isSpecial = Math.random() < .1
   return {car, laneKey}
 }
 
@@ -291,7 +327,7 @@ function iterateBumperToBumper(cb) {
   })
 }
 
-function iterateCar(cb) {
+function iterateCars(cb) {
   iterateBumperToBumper(car => cb(car))
 }
 
