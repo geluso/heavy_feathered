@@ -377,14 +377,9 @@ function makeTurn(car) {
       let index = oldLane.indexOf(car) 
       oldLane.splice(index, 1)
 
-      let insertIndex = -1
-      newLane.find((el, index, aa) => {
-        insertIndex++
-        if (el.yy < car.yy && ((index + 1) < aa.length) && car.yy < aa[index + 1].yy) {
-          return true
-        }
-      })
-      newLane.splice(insertIndex, 0, car)
+      newLane.push(car)
+      newLane.sort((car1, car2) => car1.yy - car2.yy)
+      console.log('merged', newLane)
     }
   }, 1000 / 30) 
 }
