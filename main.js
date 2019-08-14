@@ -64,10 +64,11 @@ function main() {
 
   reset(ctx)
   document.addEventListener('keypress', (ev) => {
-    if (ev.target.id !== 'tick') {
+    if (ev.target.nodeName !== 'BUTTON') {
       togglePlayback(ctx)
     }
   })
+  document.getElementById('playpause').addEventListener('click', () => togglePlayback(ctx))
   document.getElementById('tick').addEventListener('click', () => tick(ctx, true))
   document.addEventListener('mousedown', ev => click(ev, ctx))
 
