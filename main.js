@@ -1,3 +1,5 @@
+let TICKS = 0
+
 const WIDTH = 200
 const NUM_LANES = 4
 const HALF_LANE = WIDTH / NUM_LANES / 2
@@ -89,6 +91,8 @@ function selectCar(ctx, xx, yy) {
   if (!car) return
   car.isSpecial = !car.isSpecial
 
+  console.log(car, car.history)
+
   draw(ctx, true)
 }
 
@@ -124,7 +128,6 @@ function draw(ctx) {
 
   iterateBumperToBumper((car1, car2) => {
     if (car1.isSpecial) {
-      console.log('car12 yy', car1.yy, car2 && car2.yy)
       drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
       drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
       drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey + 1], 'forward'))
@@ -190,6 +193,7 @@ function generateCar(yy) {
 }
 
 function tick(ctx, isForced) {
+  TICKS++
   if (!isForced && !IS_PLAYING) return
 
   iterateBumperToBumper((car1, car2) => {
@@ -203,6 +207,9 @@ function tick(ctx, isForced) {
     } else if (car2) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
+  
+      if (distance < 5) debugger
+
       if (distance < MIN_DISTANCE) {
         car1.yy = initialYY + car1.speed / 2
         car1.isBraking = true
@@ -211,7 +218,8 @@ function tick(ctx, isForced) {
           car1.isDisplayingBradking = false
         }, 600)
   
-        car2.speed *= 1.2
+        car2.history.push(`${TICKS} sped up from ${car2.speed} to ${car2.speed * 1.2}`)
+        car2.yy += 1
       }
     } else if (!car1.isMakingTurn && Math.random() < PERCENT_LANE_CHANGE) {
       makeTurn(car1)
@@ -362,7 +370,7 @@ function makeTurn(car) {
   if (!isSafe(car, newLaneKey)) return
 
   car.isMakingTurn = true
-  car.history.push(`from ${car.laneKey} to ${newLaneKey}`)
+  car.history.push(`${TICKS} from ${car.laneKey} to ${newLaneKey}`)
   let timerId = setInterval(() => {
     car.xx += dx
     let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
@@ -380,7 +388,6 @@ function makeTurn(car) {
 
       newLane.push(car)
       newLane.sort((car1, car2) => car1.yy - car2.yy)
-      console.log('merged', newLane)
     }
   }, 1000 / 30) 
 }
