@@ -81,7 +81,60 @@ function draw(ctx) {
   ctx.fillRect(2 * WIDTH / 4, 0, 1, HEIGHT)
   ctx.fillRect(3 * WIDTH / 4, 0, 1, HEIGHT)
 
-  iterateCar(car => drawCar(ctx, car))
+  iterateBumperToBumper((car1, car2) => {
+    drawCar(ctx, car1)
+  })
+
+  iterateBumperToBumper((car1, car2) => {
+    if (car1.special) {
+      console.log('car12 yy', car1.yy, car2 && car2.yy)
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey + 1], 'forward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'backward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey + 1], 'backward'))
+    }
+  })
+}
+
+function closestCar(car, lane, direction) {
+  if (!lane) return
+
+  let minDistance = NaN
+  let closest = null
+  lane.forEach(car2 => {
+    if (direction === 'forward') {
+      if (car2.yy < car.yy) {
+        let distance = Math.abs(car2.yy - car.yy)
+        if (closest === null || distance < minDistance) {
+          minDistance = distance
+          closest = car2
+        }
+      }
+    } else if (direction === 'backward') {
+      if (car2.yy > car.yy) {
+        let distance = Math.abs(car2.yy - car.yy)
+        if (closest === null || distance < minDistance) {
+          minDistance = distance
+          closest = car2
+        }
+      }
+    } 
+  })
+
+  return closest
+}
+
+function drawChain(ctx, car1, car2) {
+  if (!car2) return
+
+  ctx.strokeStyle = car1.color
+  ctx.fillStyle = car1.color
+  ctx.beginPath()
+  ctx.moveTo(car1.xx, car1.yy)
+  ctx.lineTo(car2.xx, car2.yy)
+  ctx.closePath()
+  ctx.stroke()
 }
 
 function generateCar(yy) {
@@ -156,7 +209,7 @@ function drawCar(ctx, car) {
   ctx.fillRect(car.xx - CAR_WIDTH / 2 + 2, car.yy + 2, CAR_WIDTH - 4, 6)
 
   // left headlight
-  ctx.fillStyle = 'white'
+  ctx.fillStyle = car.special ? 'yellow' : 'white'
   ctx.beginPath()
   ctx.moveTo(car.xx - CAR_WIDTH / 2 + 4, car.yy + 4)
   ctx.lineTo(car.xx - CAR_WIDTH / 2 + 4 - 5, car.yy - 10 + 4)
@@ -165,7 +218,7 @@ function drawCar(ctx, car) {
   ctx.fill()
 
   // right headlight
-  ctx.fillStyle = 'white'
+  ctx.fillStyle = car.special ? 'yellow' : 'white'
   ctx.beginPath()
   ctx.moveTo(car.xx + CAR_WIDTH / 2 - 4, car.yy + 4)
   ctx.lineTo(car.xx + CAR_WIDTH / 2 - 4 - 5, car.yy - 10 + 4)
@@ -198,6 +251,8 @@ function randomCar(yy) {
   const car = new Car(xx, yy, speed, color)
   car.laneKey = laneKey
   car.number = CAR_COUNT++
+
+  car.special = Math.random() < .1
   return {car, laneKey}
 }
 
@@ -228,10 +283,10 @@ function iterateOverCarsLaneByLane(cb) {
 
 function iterateBumperToBumper(cb) {
   iterateOverCarsLaneByLane((lane, laneKey) => {
-    for (let i = lane.length - 1; i >= 0; i--) {
+    for (let i = 0; i < lane.length; i++) {
       let thisCar = lane[i]
-      let nextCar = lane[i - 1]
-      cb(thisCar, nextCar, i, i - 1)
+      let nextCar = lane[i + 1]
+      cb(thisCar, nextCar, i, i + 1)
     }
   })
 }
@@ -270,6 +325,7 @@ function makeTurn(car) {
   if (!isSafe(car, newLaneKey)) return
 
   car.isMakingTurn = true
+  car.history.push(`from ${car.laneKey} to ${newLaneKey}`)
   let timerId = setInterval(() => {
     car.xx += dx
     let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
