@@ -5,6 +5,9 @@ const NUM_LANES = 4
 const HALF_LANE = WIDTH / NUM_LANES / 2
 const HEIGHT = 700
 
+const HONK_DELAY_MIN = 50
+const HONK_DELAY_RANGE = 250
+
 const LANES_X = [
   1 * WIDTH / 4 - HALF_LANE,
   2 * WIDTH / 4 - HALF_LANE,
@@ -84,7 +87,7 @@ function main() {
     let keyCode = document.getElementById('keycode')
     keyCode.textContent = ev.which
 
-    if (ev.which === 13) honk()
+    if (ev.which === 13) honk(DRIVING)
     if (ev.which === 32) togglePlayback(ctx)
     if (ev.which === 9) setDriver(ctx) // TAB
     if (ev.which === 82) reverse(ctx)
@@ -141,7 +144,6 @@ function getClosestCar(xx, yy) {
 function getNearbyCars(car) {
   let nearby = collectCars(car2 => {
     let distance = Util.distance(car.xx, car.yy, car2.xx, car2.yy)
-    console.log({distance})
     return distance < CAR_HEIGHT * 3
   })
   return nearby
@@ -230,6 +232,7 @@ function generateCar(yy) {
   }
 
   sortLane(lane)
+  return car
 }
 
 function tick(ctx, isForced) {
@@ -239,24 +242,25 @@ function tick(ctx, isForced) {
   iterateBumperToBumper((car1, car2) => {
     let initialYY = car1.yy
     car1.tick()
-    car1.isBraking = false
 
     // has the car gone off the top of the screen?
     if (isCarOffScreen(car1)) {
-      console.log('off top')
       car1.isToBeDeleted = 'off top of screen'
     } else if (car2) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
   
-      //if (distance < 5) debugger
-
       if (distance < MIN_DISTANCE) {
         car1.yy = initialYY + car2.speed
         car1.speed = car2.speed
 
         car1.isBraking = true
         car1.isDisplayingBradking = true
+
+        if (car1.wasHonked) {
+          setTimeout(() => honk(car1), Math.random() * HONK_DELAY_MIN + HONK_DELAY_RANGE)
+          car1.wasHonked = false
+        }
 
         setTimeout(() => {
           car1.isDisplayingBradking = false
@@ -275,7 +279,12 @@ function tick(ctx, isForced) {
   })
 
   if (totalCars() < ROAD_CAPACITY) {
-    generateCar(DRIVING.yy + (HEIGHT - CENTER_YY))
+    if (carsInTopRegion() < 6) {
+      let newCar = generateCar(DRIVING.yy - HEIGHT)
+      newCar.speed = DRIVING.speed * .6 + Math.random() * DRIVING.speed * .4
+    } else {
+      generateCar(DRIVING.yy + (HEIGHT - CENTER_YY))
+    }
   }   
 
   filterCars(car => {
@@ -511,9 +520,9 @@ function displaySpeed() {
   speed.textContent = DRIVING.speed + ' MPH'
 }
 
-function honk() {
-  let neighbors = getNearbyCars(DRIVING).filter(car => {
-    return (car.yy + CAR_HEIGHT) < DRIVING.yy
+function honk(fromCar) {
+  let neighbors = getNearbyCars(fromCar).filter(car => {
+    return (car.yy + CAR_HEIGHT) < fromCar.yy
   })
 
   neighbors.forEach(car => {
@@ -537,4 +546,15 @@ function isCarOffScreen(car) {
   // for it to be off screen
   if (Math.abs(DRIVING.yy - car.yy) > HEIGHT) return true
   if (car.yy > DRIVING.yy) return false
+}
+
+function carsInTopRegion() {
+  let total = 0
+  iterateCars(car => {
+    let distance = DRIVING.yy - car.yy
+    if (distance > 500) {
+      total++
+    }
+  })
+  return total
 }
