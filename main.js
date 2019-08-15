@@ -40,6 +40,7 @@ function setDriver(ctx) {
   DRIVING = LANES[1][LANES[1].length - 1]
   DRIVING.isDriving = true
   DRIVING.wasEverDriven = true
+  DRIVING.personality = 'player'
   draw(ctx)
 }
 
@@ -219,6 +220,8 @@ function tick(ctx, isForced) {
     // has the car gone off the top of the screen?
     if (isCarOffScreen(car1)) {
       car1.isToBeDeleted = 'off top of screen'
+    } else if (car1.wantsToTurn) {
+      makeTurn(car1, car1.wantsToTurn)
     } else if (car2) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
@@ -231,7 +234,7 @@ function tick(ctx, isForced) {
         car1.isDisplayingBradking = true
 
         if (car1.wasHonked) {
-          setTimeout(() => honk(car1), Math.random() * HONK_DELAY_MIN + HONK_DELAY_RANGE)
+          setTimeout(() => honk(car1), Math.random() * Constants.HONK_DELAY_MIN + Constants.HONK_DELAY_RANGE)
           car1.wasHonked = false
         }
 
@@ -241,13 +244,7 @@ function tick(ctx, isForced) {
   
         car2.yy += 1
       }
-    } else if (car1.wantsToTurn) {
-      makeTurn(car1, car1.wantsToTurn)
     // prevent cars that have been driven from making autonomous lane changes again
-    } else if (Math.random() < Constants.PERCENT_LANE_CHANGE) {
-      if (!car1.wasEverDriven && !car1.turnedRecently) {
-        makeTurn(car1)
-      }
     }
   })
 
@@ -339,7 +336,14 @@ function randomCar(yy) {
   let bb = Math.floor(255 * Math.random())
   let color = `rgb(${rr},${gg},${bb})`
 
+
   const car = new Car(xx, yy, speed, color)
+
+  if (Math.random() < .1) {
+    car.personality = 'aggressive'    
+    car.color = 'red'
+  }
+
   car.laneKey = laneKey
   car.number = CAR_COUNT++
 

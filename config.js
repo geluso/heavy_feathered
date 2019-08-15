@@ -20,10 +20,10 @@ export const MIN_DISTANCE = CAR_HEIGHT + 8
 export const SPEED_FACTOR = 20
 
 export const SCALE = 5
-export const PERCENT_LANE_CHANGE = .8
+export const PERCENT_LANE_CHANGE = .2
 
 export const CENTER_XX = 75
 export const CENTER_YY = 600
 
-export let ROAD_CAPACITY = 40
+export let ROAD_CAPACITY = 8
 export const ENABLE_RANDOM_WALK = false

@@ -6,12 +6,30 @@ export default class Car {
     this.speed = speed || 1
     this.color = color || 'yellow'
 
+    this.personality = 'nuetral'
     this.isBraking = false
     this.history = []
   }
 
   tick() {
+    if (this.personality === 'aggressive') {
+      if (this.isBraking) {
+        this.wantsToTurn = true
+      } else {
+        this.speed += .1
+      }
+    }
+  
     this.isBraking = false
     this.yy -= this.speed    
   }
 }
+
+Car.personalities = [
+  'nuetral',
+  'player',
+  'aggressive',
+  'slow',
+  'follower',
+  'left-laner',
+]
