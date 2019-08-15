@@ -20,7 +20,7 @@ const SPEED_FACTOR = 20
 
 const SCALE = 5
 const ENABLE_RANDOM_WALK = false
-let ROAD_CAPACITY = 18
+let ROAD_CAPACITY = 12
 const PERCENT_LANE_CHANGE = .8
 
 let IS_PLAYING = false
@@ -360,10 +360,10 @@ function iterateOverCarsLaneByLane(cb) {
 
 function iterateBumperToBumper(cb) {
   iterateOverCarsLaneByLane((lane, laneKey) => {
-    for (let i = 0; i < lane.length; i++) {
+    for (let i = lane.length - 1; i >= 0; i--) {
       let thisCar = lane[i]
-      let nextCar = lane[i + 1]
-      cb(thisCar, nextCar, i, i + 1)
+      let nextCar = lane[i - 1]
+      cb(thisCar, nextCar, i, i - 1)
     }
   })
 }
