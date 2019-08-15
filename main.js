@@ -27,6 +27,8 @@ let IS_PLAYING = false
 let CAR_COUNT = 1
 
 let DRIVING = null
+let CENTER_XX = 75
+let CENTER_YY = 600
 
 import Car from './car.js'
 import Util from './util.js'
@@ -53,8 +55,8 @@ function reset(ctx) {
     sortLane(lane)
   })
 
-  tick(ctx, true);
   setDriver(ctx)
+  tick(ctx, true);
 }
 
 function setDriver(ctx) {
@@ -231,7 +233,7 @@ function tick(ctx, isForced) {
     car1.isBraking = false
 
     // has the car gone off the top of the screen?
-    if (car1.yy < -CAR_HEIGHT) {
+    if (isCarOffScreen(car1)) {
       car1.isToBeDeleted = 'off top of screen'
     } else if (car2) {
       // is the car so close to another it should break?
@@ -280,43 +282,52 @@ function randomWalk() {
 }
 
 function drawCar(ctx, car) {
+  let xx = car.xx
+  let yy = car.yy
+
+  if (car === DRIVING) {
+    yy = CENTER_YY
+  } else {
+    yy = CENTER_YY + (car.yy - DRIVING.yy)
+  }
+
   ctx.fillStyle = car.color
-  ctx.fillRect(car.xx - 10, car.yy, CAR_WIDTH, CAR_HEIGHT)
+  ctx.fillRect(xx - 10, yy, CAR_WIDTH, CAR_HEIGHT)
 
   ctx.fillStyle = 'black'
-  ctx.fillText('' + car.number + '\n' + car.laneKey, car.xx + 10, car.yy)
+  ctx.fillText('' + car.number + '\n' + car.laneKey, xx + 10, yy)
 
   ctx.fillStyle = 'rgb(34,192,240)'
-  ctx.fillRect(car.xx - CAR_WIDTH / 2 + 2, car.yy + 2, CAR_WIDTH - 4, 6)
+  ctx.fillRect(xx - CAR_WIDTH / 2 + 2, yy + 2, CAR_WIDTH - 4, 6)
 
   // left headlight
   ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
-  ctx.moveTo(car.xx - CAR_WIDTH / 2 + 4, car.yy + 4)
-  ctx.lineTo(car.xx - CAR_WIDTH / 2 + 4 - 5, car.yy - 10 + 4)
-  ctx.lineTo(car.xx - CAR_WIDTH / 2 + 4 + 5, car.yy - 10 + 4)
+  ctx.moveTo(xx - CAR_WIDTH / 2 + 4, yy + 4)
+  ctx.lineTo(xx - CAR_WIDTH / 2 + 4 - 5, yy - 10 + 4)
+  ctx.lineTo(xx - CAR_WIDTH / 2 + 4 + 5, yy - 10 + 4)
   ctx.closePath()
   ctx.fill()
 
   // right headlight
   ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
-  ctx.moveTo(car.xx + CAR_WIDTH / 2 - 4, car.yy + 4)
-  ctx.lineTo(car.xx + CAR_WIDTH / 2 - 4 - 5, car.yy - 10 + 4)
-  ctx.lineTo(car.xx + CAR_WIDTH / 2 - 4 + 5, car.yy - 10 + 4)
+  ctx.moveTo(xx + CAR_WIDTH / 2 - 4, yy + 4)
+  ctx.lineTo(xx + CAR_WIDTH / 2 - 4 - 5, yy - 10 + 4)
+  ctx.lineTo(xx + CAR_WIDTH / 2 - 4 + 5, yy - 10 + 4)
   ctx.closePath()
   ctx.fill()
 
   if (car.isBraking || car.isDisplayingBradking) {
     ctx.fillStyle = 'red'
-    ctx.fillRect(car.xx - CAR_WIDTH / 2,                car.yy + CAR_HEIGHT - 3, 3, 3)
-    ctx.fillRect(car.xx - CAR_WIDTH / 2+ CAR_WIDTH - 3, car.yy + CAR_HEIGHT - 3, 3, 3)
+    ctx.fillRect(xx - CAR_WIDTH / 2,                yy + CAR_HEIGHT - 3, 3, 3)
+    ctx.fillRect(xx - CAR_WIDTH / 2+ CAR_WIDTH - 3, yy + CAR_HEIGHT - 3, 3, 3)
   }
 
   if (car.isDriving) {
     ctx.strokeStyle = 'yellow'
     ctx.beginPath();
-    ctx.arc(car.xx, car.yy + CAR_HEIGHT / 2, CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
+    ctx.arc(xx, yy + CAR_HEIGHT / 2, CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
     ctx.stroke();
   }
 }
@@ -484,4 +495,11 @@ function honk() {
   let audio = document.createElement('audio')
   audio.src = 'horn.wav'
   audio.play()
+}
+
+function isCarOffScreen(car) {
+  // if the car is below the current car it's impossible
+  // for it to be off screen
+  if (car.yy > DRIVING.yy) return false
+  if (DRIVING.yy - car.yy > HEIGHT) return true
 }
