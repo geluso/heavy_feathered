@@ -118,7 +118,7 @@ function getClosestCar(xx, yy) {
 function getNearbyCars(car) {
   let nearby = collectCars(car2 => {
     let distance = Util.distance(car.xx, car.yy, car2.xx, car2.yy)
-    return distance < Constants.CAR_HEIGHT * 3
+    return distance < Constants.HONK_RADIUS
   })
   return nearby
 }
@@ -505,11 +505,17 @@ function honk(fromCar) {
   neighbors.forEach(car => {
     car.wasHonked = true
 
-    // attempt to make a turn
-    makeTurn(car)
+    if (car.laneKey === DRIVING.laneKey) {
+      // attempt to make a turn
+      makeTurn(car, 'right')
+    }
 
-    if (!car.isMakingTurn) {    
-      car.speed += Math.random() * .4
+    if (!car.isMakingTurn) {
+      if (car.yy > DRIVING.yy) {    
+        car.speed += Math.random() * .4
+      } else {
+        car.speed -= Math.random() * .4
+      }
     }
   })
 

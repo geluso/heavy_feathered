@@ -27,3 +27,4 @@ export const CENTER_YY = 600
 
 export let ROAD_CAPACITY = 8
 export const ENABLE_RANDOM_WALK = false
+export const HONK_RADIUS = CAR_HEIGHT * 5
