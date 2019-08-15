@@ -1,9 +1,10 @@
 body {
   background-color: darkgreen;
+  color: white;
 }
 
 canvas {
   width: 200px;
-  height: 780px;
+  height: 700px;
   border: solid black 1px;
 }

@@ -1,7 +1,9 @@
+let TICKS = 0
+
 const WIDTH = 200
 const NUM_LANES = 4
 const HALF_LANE = WIDTH / NUM_LANES / 2
-const HEIGHT = 780
+const HEIGHT = 700
 
 const LANES_X = [
   1 * WIDTH / 4 - HALF_LANE,
@@ -18,13 +20,16 @@ const SPEED_FACTOR = 20
 
 const SCALE = 5
 const ENABLE_RANDOM_WALK = false
-let ROAD_CAPACITY = 18
+let ROAD_CAPACITY = 12
 const PERCENT_LANE_CHANGE = .8
 
 let IS_PLAYING = false
 let CAR_COUNT = 1
 
+let DRIVING = null
+
 import Car from './car.js'
+import Util from './util.js'
 
 let LANES = {}
 for (let i = 0; i < NUM_LANES; i++) {
@@ -44,11 +49,20 @@ function reset(ctx) {
   }
 
   iterateOverCarsLaneByLane((lane, key) => {
-    lane.sort(compareLanePosition)  
     dedupeLane(key)
+    sortLane(lane)
   })
 
   tick(ctx, true);
+  setDriver(ctx)
+}
+
+function setDriver(ctx) {
+  if (DRIVING) DRIVING.isDriving = false
+  DRIVING = LANES[1][LANES[1].length - 1]
+  DRIVING.isDriving = true
+  DRIVING.wasEverDriven = true
+  draw(ctx)
 }
 
 function main() {
@@ -62,10 +76,63 @@ function main() {
   ctx.height = HEIGHT
 
   reset(ctx)
-  document.addEventListener('keypress', () => togglePlayback(ctx))
+  document.addEventListener('keyup', (ev) => {
+    console.log('key', ev.which)
+
+    let keyCode = document.getElementById('keycode')
+    keyCode.textContent = ev.which
+
+    if (ev.which === 32) togglePlayback(ctx)
+    if (ev.which === 9) setDriver(ctx) // TAB
+    if (ev.which === 82) reverse(ctx)
+    if (ev.which === 75 || ev.which === 38) speedUp(ctx) // speedup
+    if (ev.which === 74 || ev.which === 40) slowDown(ctx) // slowdown
+    if (ev.which === 72 || ev.which === 37) makeTurn(DRIVING, 'left')
+    if (ev.which === 76 || ev.which === 39) makeTurn(DRIVING, 'right')
+  })
+  document.getElementById('playpause').addEventListener('click', () => togglePlayback(ctx))
+  document.getElementById('tick').addEventListener('click', () => tick(ctx, true))
+  document.addEventListener('mousedown', ev => click(ev, ctx))
+
 
   if (ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
   setInterval(() => tick(ctx), 1000 / 60)
+}
+
+function click(ev, ctx) {
+  const rect = ev.target.getBoundingClientRect();
+  const xx = ev.clientX - rect.left;
+  const yy = ev.clientY - rect.top;
+  selectCar(ctx, xx, yy)
+}
+
+function selectCar(ctx, xx, yy) {
+  let {car, distance} = getClosestCar(xx, yy)
+  if (!car) return
+  if (distance > CAR_HEIGHT) return
+
+  car.isSpecial = !car.isSpecial
+  car.isDriving = !car.isDriving
+
+  DRIVING = car
+  DRIVING.wasEverDriven = true
+
+  console.log(car, car.history)
+
+  draw(ctx, true)
+}
+
+function getClosestCar(xx, yy) {
+  let minDistance = null
+  let closestCar = null
+  iterateCars(car => {
+    let distance = Util.distance(xx, yy, car.xx, car.yy)
+    if (!minDistance || distance < minDistance) {
+      minDistance = distance
+      closestCar = car
+    }
+  })
+  return {car: closestCar, distance: minDistance}
 }
 
 function togglePlayback(ctx) {
@@ -81,7 +148,59 @@ function draw(ctx) {
   ctx.fillRect(2 * WIDTH / 4, 0, 1, HEIGHT)
   ctx.fillRect(3 * WIDTH / 4, 0, 1, HEIGHT)
 
-  iterateCar(car => drawCar(ctx, car))
+  iterateBumperToBumper((car1, car2) => {
+    drawCar(ctx, car1)
+  })
+
+  iterateBumperToBumper((car1, car2) => {
+    if (car1.isSpecial) {
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey + 1], 'forward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'backward'))
+      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey + 1], 'backward'))
+    }
+  })
+}
+
+function closestCar(car, lane, direction) {
+  if (!lane) return
+
+  let minDistance = NaN
+  let closest = null
+  lane.forEach(car2 => {
+    if (direction === 'forward') {
+      if (car2.yy < car.yy) {
+        let distance = Math.abs(car2.yy - car.yy)
+        if (closest === null || distance < minDistance) {
+          minDistance = distance
+          closest = car2
+        }
+      }
+    } else if (direction === 'backward') {
+      if (car2.yy > car.yy) {
+        let distance = Math.abs(car2.yy - car.yy)
+        if (closest === null || distance < minDistance) {
+          minDistance = distance
+          closest = car2
+        }
+      }
+    } 
+  })
+
+  return closest
+}
+
+function drawChain(ctx, car1, car2) {
+  if (!car2) return
+
+  ctx.strokeStyle = car1.color
+  ctx.fillStyle = car1.color
+  ctx.beginPath()
+  ctx.moveTo(car1.xx, car1.yy)
+  ctx.lineTo(car2.xx, car2.yy)
+  ctx.closePath()
+  ctx.stroke()
 }
 
 function generateCar(yy) {
@@ -97,9 +216,12 @@ function generateCar(yy) {
   } else {
     lane.push(car)
   }
+
+  sortLane(lane)
 }
 
 function tick(ctx, isForced) {
+  TICKS++
   if (!isForced && !IS_PLAYING) return
 
   iterateBumperToBumper((car1, car2) => {
@@ -113,17 +235,26 @@ function tick(ctx, isForced) {
     } else if (car2) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
+  
+      //if (distance < 5) debugger
+
       if (distance < MIN_DISTANCE) {
-        car1.yy = initialYY + car1.speed / 2
+        car1.yy = initialYY + car2.speed
+        car1.speed = car2.speed
+
         car1.isBraking = true
         car1.isDisplayingBradking = true
+
         setTimeout(() => {
           car1.isDisplayingBradking = false
         }, 600)
   
-        car2.speed *= 1.2
+        car2.yy += 1
       }
-    } else if (!car1.isMakingTurn && Math.random() < PERCENT_LANE_CHANGE) {
+    } else if (car1.wantsToTurn) {
+      makeTurn(car1, car1.wantsToTurn)
+    // prevent cars that have been driven from making autonomous lane changes again
+    } else if (DRIVING && !DRIVING.wasEverDriven && !car1.isMakingTurn && Math.random() < PERCENT_LANE_CHANGE) {
       makeTurn(car1)
     }
   })
@@ -156,7 +287,7 @@ function drawCar(ctx, car) {
   ctx.fillRect(car.xx - CAR_WIDTH / 2 + 2, car.yy + 2, CAR_WIDTH - 4, 6)
 
   // left headlight
-  ctx.fillStyle = 'white'
+  ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
   ctx.moveTo(car.xx - CAR_WIDTH / 2 + 4, car.yy + 4)
   ctx.lineTo(car.xx - CAR_WIDTH / 2 + 4 - 5, car.yy - 10 + 4)
@@ -165,7 +296,7 @@ function drawCar(ctx, car) {
   ctx.fill()
 
   // right headlight
-  ctx.fillStyle = 'white'
+  ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
   ctx.moveTo(car.xx + CAR_WIDTH / 2 - 4, car.yy + 4)
   ctx.lineTo(car.xx + CAR_WIDTH / 2 - 4 - 5, car.yy - 10 + 4)
@@ -177,6 +308,13 @@ function drawCar(ctx, car) {
     ctx.fillStyle = 'red'
     ctx.fillRect(car.xx - CAR_WIDTH / 2,                car.yy + CAR_HEIGHT - 3, 3, 3)
     ctx.fillRect(car.xx - CAR_WIDTH / 2+ CAR_WIDTH - 3, car.yy + CAR_HEIGHT - 3, 3, 3)
+  }
+
+  if (car.isDriving) {
+    ctx.strokeStyle = 'yellow'
+    ctx.beginPath();
+    ctx.arc(car.xx, car.yy + CAR_HEIGHT / 2, CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
+    ctx.stroke();
   }
 }
 
@@ -198,11 +336,9 @@ function randomCar(yy) {
   const car = new Car(xx, yy, speed, color)
   car.laneKey = laneKey
   car.number = CAR_COUNT++
-  return {car, laneKey}
-}
 
-function compareLanePosition(car1, car2) {
-  return car2.yy - car1.yy
+  car.isSpecial = Math.random() < .1
+  return {car, laneKey}
 }
 
 function dedupeLane(laneKey) {
@@ -236,7 +372,7 @@ function iterateBumperToBumper(cb) {
   })
 }
 
-function iterateCar(cb) {
+function iterateCars(cb) {
   iterateBumperToBumper(car => cb(car))
 }
 
@@ -252,8 +388,14 @@ function totalCars() {
   return sum
 }
 
-function makeTurn(car) {
+function makeTurn(car, direction) {
+  if (!car) return
+
   let isLeft = Math.random() < .7
+  if (direction) {
+    isLeft = direction === 'left'
+    car.wantsToTurn = direction
+  }
 
   let newLaneKey = car.laneKey - 1
   let dx = -4
@@ -270,6 +412,8 @@ function makeTurn(car) {
   if (!isSafe(car, newLaneKey)) return
 
   car.isMakingTurn = true
+  car.history.push(`${TICKS} from ${car.laneKey} to ${newLaneKey}`)
+  car.wantsToTurn = undefined
   let timerId = setInterval(() => {
     car.xx += dx
     let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
@@ -285,16 +429,14 @@ function makeTurn(car) {
       let index = oldLane.indexOf(car) 
       oldLane.splice(index, 1)
 
-      let insertIndex = -1
-      newLane.find((el, index, aa) => {
-        insertIndex++
-        if (el.yy < car.yy && ((index + 1) < aa.length) && car.yy < aa[index + 1].yy) {
-          return true
-        }
-      })
-      newLane.splice(insertIndex, 0, car)
+      newLane.push(car)
+      sortLane(newLane)
     }
   }, 1000 / 30) 
+}
+
+function sortLane(lane) {
+  lane.sort((car1, car2) => car1.yy - car2.yy)
 }
 
 // msmog: mirror, signal, mirror, over-the-shoulder, go
@@ -306,4 +448,28 @@ function isSafe(car, newLaneKey) {
     }
   }
   return true
+}
+
+function speedUp() {
+  if (!DRIVING) return
+  DRIVING.speed += 1
+  displaySpeed()
+}
+
+function slowDown() {
+  if (!DRIVING) return
+  DRIVING.speed -= 1
+  displaySpeed()
+}
+
+function reverse() {
+  if (!DRIVING) return
+  DRIVING.speed *= -1
+  displaySpeed()
+}
+
+
+function displaySpeed() {
+  let speed = document.getElementById('speed')
+  speed.textContent = DRIVING.speed + ' MPH'
 }
