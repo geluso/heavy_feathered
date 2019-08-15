@@ -1,43 +1,16 @@
 let TICKS = 0
 
-const WIDTH = 200
-const NUM_LANES = 4
-const HALF_LANE = WIDTH / NUM_LANES / 2
-const HEIGHT = 700
-
-const HONK_DELAY_MIN = 50
-const HONK_DELAY_RANGE = 250
-
-const LANES_X = [
-  1 * WIDTH / 4 - HALF_LANE,
-  2 * WIDTH / 4 - HALF_LANE,
-  3 * WIDTH / 4 - HALF_LANE,
-  4 * WIDTH / 4 - HALF_LANE,
-]
-
-const CAR_WIDTH = 20
-const CAR_HEIGHT = 30
-const MIN_DISTANCE = CAR_HEIGHT + 8
-
-const SPEED_FACTOR = 20
-
-const SCALE = 5
-const ENABLE_RANDOM_WALK = false
-let ROAD_CAPACITY = 40
-const PERCENT_LANE_CHANGE = .8
-
 let IS_PLAYING = false
 let CAR_COUNT = 1
 
 let DRIVING = null
-let CENTER_XX = 75
-let CENTER_YY = 600
 
+import * as Constants from './config.js'
 import Car from './car.js'
 import Util from './util.js'
 
 let LANES = {}
-for (let i = 0; i < NUM_LANES; i++) {
+for (let i = 0; i < Constants.NUM_LANES; i++) {
   LANES[i] = []
 }
 
@@ -45,11 +18,11 @@ document.addEventListener('DOMContentLoaded', main)
 
 function reset(ctx) {
   LANES = {}
-  for (let i = 0; i < NUM_LANES; i++) {
+  for (let i = 0; i < Constants.NUM_LANES; i++) {
     LANES[i] = []
   }
 
-  for (let i = 0; i < ROAD_CAPACITY; i++) {
+  for (let i = 0; i < Constants.ROAD_CAPACITY; i++) {
     generateCar()
   }
 
@@ -74,11 +47,11 @@ function main() {
   let canvas = document.getElementById('glass')
   let ctx = canvas.getContext('2d')
 
-  canvas.width = WIDTH
-  canvas.height = HEIGHT
+  canvas.width = Constants.WIDTH
+  canvas.height = Constants.HEIGHT
 
-  ctx.width = WIDTH
-  ctx.height = HEIGHT
+  ctx.width = Constants.WIDTH
+  ctx.height = Constants.HEIGHT
 
   reset(ctx)
   document.addEventListener('keydown', (ev) => {
@@ -101,7 +74,7 @@ function main() {
   document.addEventListener('mousedown', ev => click(ev, ctx))
 
 
-  if (ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
+  if (Constants.ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
   setInterval(() => tick(ctx), 1000 / 60)
 }
 
@@ -115,7 +88,7 @@ function click(ev, ctx) {
 function selectCar(ctx, xx, yy) {
   let {car, distance} = getClosestCar(xx, yy)
   if (!car) return
-  if (distance > CAR_HEIGHT) return
+  if (distance > Constants.CAR_HEIGHT) return
 
   car.isSpecial = !car.isSpecial
   car.isDriving = !car.isDriving
@@ -144,7 +117,7 @@ function getClosestCar(xx, yy) {
 function getNearbyCars(car) {
   let nearby = collectCars(car2 => {
     let distance = Util.distance(car.xx, car.yy, car2.xx, car2.yy)
-    return distance < CAR_HEIGHT * 3
+    return distance < Constants.CAR_HEIGHT * 3
   })
   return nearby
 }
@@ -155,12 +128,12 @@ function togglePlayback(ctx) {
 
 function draw(ctx) {
   ctx.fillStyle = 'gray'
-  ctx.fillRect(0, 0, WIDTH, HEIGHT)
+  ctx.fillRect(0, 0, Constants.WIDTH, Constants.HEIGHT)
 
   ctx.fillStyle = 'yellow'
-  ctx.fillRect(1 * WIDTH / 4, 0, 1, HEIGHT)
-  ctx.fillRect(2 * WIDTH / 4, 0, 1, HEIGHT)
-  ctx.fillRect(3 * WIDTH / 4, 0, 1, HEIGHT)
+  ctx.fillRect(1 * Constants.WIDTH / 4, 0, 1, Constants.HEIGHT)
+  ctx.fillRect(2 * Constants.WIDTH / 4, 0, 1, Constants.HEIGHT)
+  ctx.fillRect(3 * Constants.WIDTH / 4, 0, 1, Constants.HEIGHT)
 
   iterateBumperToBumper((car1, car2) => {
     drawCar(ctx, car1)
@@ -224,7 +197,7 @@ function generateCar(yy) {
   let lastCar = lane[lane.length - 1]
   if (lastCar) {
     let distance = Math.abs(car.yy - lastCar.yy)
-    if (distance > MIN_DISTANCE) {
+    if (distance > Constants.MIN_DISTANCE) {
       lane.push(car)
     }
   } else {
@@ -250,7 +223,7 @@ function tick(ctx, isForced) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
   
-      if (distance < MIN_DISTANCE) {
+      if (distance < Constants.MIN_DISTANCE) {
         car1.yy = initialYY + car2.speed
         car1.speed = car2.speed
 
@@ -271,19 +244,19 @@ function tick(ctx, isForced) {
     } else if (car1.wantsToTurn) {
       makeTurn(car1, car1.wantsToTurn)
     // prevent cars that have been driven from making autonomous lane changes again
-    } else if (Math.random() < PERCENT_LANE_CHANGE) {
+    } else if (Math.random() < Constants.PERCENT_LANE_CHANGE) {
       if (!car1.wasEverDriven && !car1.turnedRecently) {
         makeTurn(car1)
       }
     }
   })
 
-  if (totalCars() < ROAD_CAPACITY) {
+  if (totalCars() < Constants.ROAD_CAPACITY) {
     if (carsInTopRegion() < 6) {
-      let newCar = generateCar(DRIVING.yy - HEIGHT)
+      let newCar = generateCar(DRIVING.yy - Constants.HEIGHT)
       newCar.speed = DRIVING.speed * .6 + Math.random() * DRIVING.speed * .4
     } else {
-      generateCar(DRIVING.yy + (HEIGHT - CENTER_YY))
+      generateCar(DRIVING.yy + (Constants.HEIGHT - Constants.CENTER_YY))
     }
   }   
 
@@ -295,9 +268,9 @@ function tick(ctx, isForced) {
 }
 
 function randomWalk() {
-  let scale = Math.random() * SCALE
+  let scale = Math.random() * Constants.SCALE
   let upOrDown = Math.random() < .5 ? 1 : -1
-  ROAD_CAPACITY = Math.max(1, ROAD_CAPACITY + upOrDown * scale)
+  Constants.ROAD_CAPACITY = Math.max(1, Constants.ROAD_CAPACITY + upOrDown * scale)
 }
 
 function drawCar(ctx, car) {
@@ -305,61 +278,61 @@ function drawCar(ctx, car) {
   let yy = car.yy
 
   if (car === DRIVING) {
-    yy = CENTER_YY
+    yy = Constants.CENTER_YY
   } else {
-    yy = CENTER_YY + (car.yy - DRIVING.yy)
+    yy = Constants.CENTER_YY + (car.yy - DRIVING.yy)
   }
 
   ctx.fillStyle = car.color
-  ctx.fillRect(xx - 10, yy, CAR_WIDTH, CAR_HEIGHT)
+  ctx.fillRect(xx - 10, yy, Constants.CAR_WIDTH, Constants.CAR_HEIGHT)
 
   ctx.fillStyle = 'black'
   ctx.fillText('' + car.number + '\n' + car.laneKey, xx + 10, yy)
 
   ctx.fillStyle = 'rgb(34,192,240)'
-  ctx.fillRect(xx - CAR_WIDTH / 2 + 2, yy + 2, CAR_WIDTH - 4, 6)
+  ctx.fillRect(xx - Constants.CAR_WIDTH / 2 + 2, yy + 2, Constants.CAR_WIDTH - 4, 6)
 
   // left headlight
   ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
-  ctx.moveTo(xx - CAR_WIDTH / 2 + 4, yy + 4)
-  ctx.lineTo(xx - CAR_WIDTH / 2 + 4 - 5, yy - 10 + 4)
-  ctx.lineTo(xx - CAR_WIDTH / 2 + 4 + 5, yy - 10 + 4)
+  ctx.moveTo(xx - Constants.CAR_WIDTH / 2 + 4, yy + 4)
+  ctx.lineTo(xx - Constants.CAR_WIDTH / 2 + 4 - 5, yy - 10 + 4)
+  ctx.lineTo(xx - Constants.CAR_WIDTH / 2 + 4 + 5, yy - 10 + 4)
   ctx.closePath()
   ctx.fill()
 
   // right headlight
   ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
   ctx.beginPath()
-  ctx.moveTo(xx + CAR_WIDTH / 2 - 4, yy + 4)
-  ctx.lineTo(xx + CAR_WIDTH / 2 - 4 - 5, yy - 10 + 4)
-  ctx.lineTo(xx + CAR_WIDTH / 2 - 4 + 5, yy - 10 + 4)
+  ctx.moveTo(xx + Constants.CAR_WIDTH / 2 - 4, yy + 4)
+  ctx.lineTo(xx + Constants.CAR_WIDTH / 2 - 4 - 5, yy - 10 + 4)
+  ctx.lineTo(xx + Constants.CAR_WIDTH / 2 - 4 + 5, yy - 10 + 4)
   ctx.closePath()
   ctx.fill()
 
   if (car.isBraking || car.isDisplayingBradking) {
     ctx.fillStyle = 'red'
-    ctx.fillRect(xx - CAR_WIDTH / 2,                yy + CAR_HEIGHT - 3, 3, 3)
-    ctx.fillRect(xx - CAR_WIDTH / 2+ CAR_WIDTH - 3, yy + CAR_HEIGHT - 3, 3, 3)
+    ctx.fillRect(xx - Constants.CAR_WIDTH / 2,                yy + Constants.CAR_HEIGHT - 3, 3, 3)
+    ctx.fillRect(xx - Constants.CAR_WIDTH / 2+ Constants.CAR_WIDTH - 3, yy + Constants.CAR_HEIGHT - 3, 3, 3)
   }
 
   if (car.isDriving) {
     ctx.strokeStyle = 'yellow'
     ctx.beginPath();
-    ctx.arc(xx, yy + CAR_HEIGHT / 2, CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
+    ctx.arc(xx, yy + Constants.CAR_HEIGHT / 2, Constants.CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
     ctx.stroke();
   }
 }
 
 function randomCar(yy) {
-  let laneKey = Math.floor(LANES_X.length * Math.random())
-  let xx = LANES_X[laneKey]
-  yy = yy || HEIGHT * Math.random()
+  let laneKey = Math.floor(Constants.LANES_X.length * Math.random())
+  let xx = Constants.LANES_X[laneKey]
+  yy = yy || Constants.HEIGHT * Math.random()
 
   // have the car drive between 55-80 MPH scaled to where 10 represents 60 MPH
   let minSpeed = 55
   let maxSpeed = 82
-  let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / SPEED_FACTOR
+  let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / Constants.SPEED_FACTOR
 
   let rr = Math.floor(255 * Math.random())
   let gg = Math.floor(255 * Math.random())
@@ -380,7 +353,7 @@ function dedupeLane(laneKey) {
     let nextCar = lane[i + 1]
 
     let distance = Math.abs(thisCar.yy - nextCar.yy)
-    if (distance < CAR_HEIGHT) {
+    if (distance < Constants.CAR_HEIGHT) {
       thisCar.isToBeDeleted = 'deduping lane'
     }
   }
@@ -462,10 +435,10 @@ function makeTurn(car, direction) {
 
   let timerId = setInterval(() => {
     car.xx += dx
-    let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
+    let isDone = Math.abs(car.xx - Constants.LANES_X[newLaneKey]) < 8
     if (isDone) {
       car.isMakingTurn = false
-      car.xx = LANES_X[newLaneKey]
+      car.xx = Constants.LANES_X[newLaneKey]
       clearInterval(timerId)
 
       let oldLane = LANES[car.laneKey]
@@ -489,7 +462,7 @@ function sortLane(lane) {
 function isSafe(car, newLaneKey) {
   for (let otherCar of LANES[newLaneKey]) {
     let distance = Math.abs(car.yy - otherCar.yy)
-    if (distance < MIN_DISTANCE) {
+    if (distance < Constants.MIN_DISTANCE) {
       return false
     }
   }
@@ -522,7 +495,7 @@ function displaySpeed() {
 
 function honk(fromCar) {
   let neighbors = getNearbyCars(fromCar).filter(car => {
-    return (car.yy + CAR_HEIGHT) < fromCar.yy
+    return (car.yy + Constants.CAR_HEIGHT) < fromCar.yy
   })
 
   neighbors.forEach(car => {
@@ -544,7 +517,7 @@ function honk(fromCar) {
 function isCarOffScreen(car) {
   // if the car is below the current car it's impossible
   // for it to be off screen
-  if (Math.abs(DRIVING.yy - car.yy) > HEIGHT) return true
+  if (Math.abs(DRIVING.yy - car.yy) > Constants.HEIGHT) return true
   if (car.yy > DRIVING.yy) return false
 }
 
