@@ -26,6 +26,8 @@ const PERCENT_LANE_CHANGE = .8
 let IS_PLAYING = false
 let CAR_COUNT = 1
 
+let DRIVING = null
+
 import Car from './car.js'
 import Util from './util.js'
 
@@ -47,11 +49,19 @@ function reset(ctx) {
   }
 
   iterateOverCarsLaneByLane((lane, key) => {
-    lane.sort(compareLanePosition)  
     dedupeLane(key)
+    sortLane(lane)
   })
 
   tick(ctx, true);
+  setDriver(ctx)
+}
+
+function setDriver(ctx) {
+  if (DRIVING) DRIVING.isDriving = false
+  DRIVING = LANES[1][LANES[1].length - 1]
+  DRIVING.isDriving = true
+  draw(ctx)
 }
 
 function main() {
@@ -65,10 +75,19 @@ function main() {
   ctx.height = HEIGHT
 
   reset(ctx)
-  document.addEventListener('keypress', (ev) => {
-    if (ev.target.nodeName !== 'BUTTON') {
-      togglePlayback(ctx)
-    }
+  document.addEventListener('keyup', (ev) => {
+    console.log('key', ev.which)
+
+    let keyCode = document.getElementById('keycode')
+    keyCode.textContent = ev.which
+
+    if (ev.which === 32) togglePlayback(ctx)
+    if (ev.which === 9) setDriver(ctx) // TAB
+    if (ev.which === 82) reverse(ctx)
+    if (ev.which === 75 || ev.which === 38) speedUp(ctx) // speedup
+    if (ev.which === 74 || ev.which === 40) slowDown(ctx) // slowdown
+    if (ev.which === 72 || ev.which === 37) makeTurn(DRIVING, 'left')
+    if (ev.which === 76 || ev.which === 39) makeTurn(DRIVING, 'right')
   })
   document.getElementById('playpause').addEventListener('click', () => togglePlayback(ctx))
   document.getElementById('tick').addEventListener('click', () => tick(ctx, true))
@@ -87,9 +106,15 @@ function click(ev, ctx) {
 }
 
 function selectCar(ctx, xx, yy) {
-  let car = getClosestCar(xx, yy)
+  let {car, distance} = getClosestCar(xx, yy)
   if (!car) return
+  if (distance > CAR_HEIGHT) return
+
   car.isSpecial = !car.isSpecial
+  car.isDriving = !car.isDriving
+
+  DRIVING = car
+  DRIVING.wasEverDriven = true
 
   console.log(car, car.history)
 
@@ -106,7 +131,7 @@ function getClosestCar(xx, yy) {
       closestCar = car
     }
   })
-  return closestCar  
+  return {car: closestCar, distance: minDistance}
 }
 
 function togglePlayback(ctx) {
@@ -190,6 +215,8 @@ function generateCar(yy) {
   } else {
     lane.push(car)
   }
+
+  sortLane(lane)
 }
 
 function tick(ctx, isForced) {
@@ -208,7 +235,7 @@ function tick(ctx, isForced) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
   
-      if (distance < 5) debugger
+      //if (distance < 5) debugger
 
       if (distance < MIN_DISTANCE) {
         car1.yy = initialYY + car1.speed / 2
@@ -218,10 +245,12 @@ function tick(ctx, isForced) {
           car1.isDisplayingBradking = false
         }, 600)
   
-        car2.history.push(`${TICKS} sped up from ${car2.speed} to ${car2.speed * 1.2}`)
         car2.yy += 1
       }
-    } else if (!car1.isMakingTurn && Math.random() < PERCENT_LANE_CHANGE) {
+    } else if (car1.wantsToTurn) {
+      makeTurn(car1, car1.wantsToTurn)
+    // prevent cars that have been driven from making autonomous lane changes again
+    } else if (DRIVING && !DRIVING.wasEverDriven && !car1.isMakingTurn && Math.random() < PERCENT_LANE_CHANGE) {
       makeTurn(car1)
     }
   })
@@ -276,6 +305,13 @@ function drawCar(ctx, car) {
     ctx.fillRect(car.xx - CAR_WIDTH / 2,                car.yy + CAR_HEIGHT - 3, 3, 3)
     ctx.fillRect(car.xx - CAR_WIDTH / 2+ CAR_WIDTH - 3, car.yy + CAR_HEIGHT - 3, 3, 3)
   }
+
+  if (car.isDriving) {
+    ctx.strokeStyle = 'yellow'
+    ctx.beginPath();
+    ctx.arc(car.xx, car.yy + CAR_HEIGHT / 2, CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
 }
 
 function randomCar(yy) {
@@ -299,10 +335,6 @@ function randomCar(yy) {
 
   car.isSpecial = Math.random() < .1
   return {car, laneKey}
-}
-
-function compareLanePosition(car1, car2) {
-  return car2.yy - car1.yy
 }
 
 function dedupeLane(laneKey) {
@@ -352,8 +384,14 @@ function totalCars() {
   return sum
 }
 
-function makeTurn(car) {
+function makeTurn(car, direction) {
+  if (!car) return
+
   let isLeft = Math.random() < .7
+  if (direction) {
+    isLeft = direction === 'left'
+    car.wantsToTurn = direction
+  }
 
   let newLaneKey = car.laneKey - 1
   let dx = -4
@@ -371,6 +409,7 @@ function makeTurn(car) {
 
   car.isMakingTurn = true
   car.history.push(`${TICKS} from ${car.laneKey} to ${newLaneKey}`)
+  car.wantsToTurn = undefined
   let timerId = setInterval(() => {
     car.xx += dx
     let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
@@ -387,9 +426,13 @@ function makeTurn(car) {
       oldLane.splice(index, 1)
 
       newLane.push(car)
-      newLane.sort((car1, car2) => car1.yy - car2.yy)
+      sortLane(newLane)
     }
   }, 1000 / 30) 
+}
+
+function sortLane(lane) {
+  lane.sort((car1, car2) => car1.yy - car2.yy)
 }
 
 // msmog: mirror, signal, mirror, over-the-shoulder, go
@@ -401,4 +444,28 @@ function isSafe(car, newLaneKey) {
     }
   }
   return true
+}
+
+function speedUp() {
+  if (!DRIVING) return
+  DRIVING.speed += 1
+  displaySpeed()
+}
+
+function slowDown() {
+  if (!DRIVING) return
+  DRIVING.speed -= 1
+  displaySpeed()
+}
+
+function reverse() {
+  if (!DRIVING) return
+  DRIVING.speed *= -1
+  displaySpeed()
+}
+
+
+function displaySpeed() {
+  let speed = document.getElementById('speed')
+  speed.textContent = DRIVING.speed + ' MPH'
 }
