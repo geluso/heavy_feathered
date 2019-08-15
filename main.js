@@ -138,6 +138,15 @@ function getClosestCar(xx, yy) {
   return {car: closestCar, distance: minDistance}
 }
 
+function getNearbyCars(car) {
+  let nearby = collectCars(car2 => {
+    let distance = Util.distance(car.xx, car.yy, car2.xx, car2.yy)
+    console.log({distance})
+    return distance < CAR_HEIGHT * 3
+  })
+  return nearby
+}
+
 function togglePlayback(ctx) {
   IS_PLAYING = !IS_PLAYING
 }
@@ -396,6 +405,16 @@ function filterCars(test) {
   })
 }
 
+function collectCars(test) {
+  let collection = []
+  iterateCars(car => {
+    if (test(car)) {
+      collection.push(car)
+    }
+  })
+  return collection
+}
+
 function totalCars() {
   let sum = 0
   iterateOverCarsLaneByLane(lane => sum += lane.length)
@@ -493,6 +512,21 @@ function displaySpeed() {
 }
 
 function honk() {
+  let neighbors = getNearbyCars(DRIVING).filter(car => {
+    return (car.yy + CAR_HEIGHT) < DRIVING.yy
+  })
+
+  neighbors.forEach(car => {
+    car.wasHonked = true
+
+    // attempt to make a turn
+    makeTurn(car)
+
+    if (!car.isMakingTurn) {    
+      car.speed += Math.random() * .4
+    }
+  })
+
   let audio = document.createElement('audio')
   audio.src = 'horn.wav'
   audio.play()
