@@ -234,6 +234,7 @@ function tick(ctx, isForced) {
 
     // has the car gone off the top of the screen?
     if (isCarOffScreen(car1)) {
+      console.log('off top')
       car1.isToBeDeleted = 'off top of screen'
     } else if (car2) {
       // is the car so close to another it should break?
@@ -265,7 +266,7 @@ function tick(ctx, isForced) {
   })
 
   if (totalCars() < ROAD_CAPACITY) {
-    generateCar(HEIGHT + CAR_HEIGHT)
+    generateCar(DRIVING.yy + (HEIGHT - CENTER_YY))
   }   
 
   filterCars(car => {
