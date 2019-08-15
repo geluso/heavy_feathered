@@ -501,6 +501,6 @@ function honk() {
 function isCarOffScreen(car) {
   // if the car is below the current car it's impossible
   // for it to be off screen
+  if (Math.abs(DRIVING.yy - car.yy) > HEIGHT) return true
   if (car.yy > DRIVING.yy) return false
-  if (DRIVING.yy - car.yy > HEIGHT) return true
 }
