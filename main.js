@@ -43,6 +43,8 @@ function setDriver(ctx) {
   DRIVER.personality = 'player'
   draw(ctx)
 
+  console.log(DRIVER.speed)
+
   let stone = LANES[0][0]
   stone.yy = 50
   stone.speed = 0
@@ -220,6 +222,9 @@ function tick(ctx, isForced) {
   iterateBumperToBumper((car1, car2) => {
     let initialYY = car1.yy
     car1.tick()
+    if (car1 === DRIVER) {
+      displaySpeed()
+    }
 
     // has the car gone off the top of the screen?
     if (isCarOffScreen(car1)) {
@@ -231,7 +236,7 @@ function tick(ctx, isForced) {
       let distance = Math.abs(car1.yy - car2.yy)
   
       if (distance < Constants.MIN_DISTANCE) {
-        car1.yy = initialYY + car2.speed
+        car1.yy = initialYY + (car2.speed / Constants.SPEED_FACTOR)
         car1.speed = car2.speed
 
         car1.isBraking = true
@@ -331,9 +336,8 @@ function randomCar(yy) {
   yy = yy || Constants.HEIGHT * Math.random()
 
   // have the car drive between 55-80 MPH scaled to where 10 represents 60 MPH
-  let minSpeed = 55
-  let maxSpeed = 82
-  let speed = (minSpeed + (maxSpeed - minSpeed) * Math.random()) / Constants.SPEED_FACTOR
+  let spread = Constants.MAX_SPEED - Constants.MIN_SPEED
+  let speed = Constants.MIN_SPEED + (spread) * Math.random()
 
   let rr = Math.floor(255 * Math.random())
   let gg = Math.floor(255 * Math.random())

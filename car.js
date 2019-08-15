@@ -1,3 +1,5 @@
+import * as Constants from './config.js'
+
 export default class Car {
   constructor(xx, yy, speed, color) {
     this.speed = 1
@@ -16,12 +18,12 @@ export default class Car {
       if (this.isBraking) {
         this.wantsToTurn = true
       } else {
-        this.speed += .1
+        this.speed += 1
       }
     }
   
     this.isBraking = false
-    this.yy -= this.speed    
+    this.yy -= (this.speed / Constants.SPEED_FACTOR)
   }
 }
 
