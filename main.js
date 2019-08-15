@@ -549,7 +549,7 @@ function carsInTopRegion() {
 function drawLaneStripes(ctx, xx) {
   ctx.fillStyle = 'yellow'  
 
-  for (let yy = 0; yy < Constants.HEIGHT; yy += 50) {
+  for (let yy = -100; yy < Constants.HEIGHT; yy += 50) {
     ctx.fillRect(xx, yy - DRIVER.yy % 50, 2, 18)  
   }
 }
