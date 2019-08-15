@@ -20,7 +20,7 @@ const SPEED_FACTOR = 20
 
 const SCALE = 5
 const ENABLE_RANDOM_WALK = false
-let ROAD_CAPACITY = 12
+let ROAD_CAPACITY = 40
 const PERCENT_LANE_CHANGE = .8
 
 let IS_PLAYING = false
@@ -76,12 +76,13 @@ function main() {
   ctx.height = HEIGHT
 
   reset(ctx)
-  document.addEventListener('keyup', (ev) => {
+  document.addEventListener('keydown', (ev) => {
     console.log('key', ev.which)
 
     let keyCode = document.getElementById('keycode')
     keyCode.textContent = ev.which
 
+    if (ev.which === 13) honk()
     if (ev.which === 32) togglePlayback(ctx)
     if (ev.which === 9) setDriver(ctx) // TAB
     if (ev.which === 82) reverse(ctx)
@@ -254,8 +255,10 @@ function tick(ctx, isForced) {
     } else if (car1.wantsToTurn) {
       makeTurn(car1, car1.wantsToTurn)
     // prevent cars that have been driven from making autonomous lane changes again
-    } else if (DRIVING && !DRIVING.wasEverDriven && !car1.isMakingTurn && Math.random() < PERCENT_LANE_CHANGE) {
-      makeTurn(car1)
+    } else if (Math.random() < PERCENT_LANE_CHANGE) {
+      if (!car1.wasEverDriven && !car1.turnedRecently) {
+        makeTurn(car1)
+      }
     }
   })
 
@@ -337,7 +340,6 @@ function randomCar(yy) {
   car.laneKey = laneKey
   car.number = CAR_COUNT++
 
-  car.isSpecial = Math.random() < .1
   return {car, laneKey}
 }
 
@@ -391,7 +393,7 @@ function totalCars() {
 function makeTurn(car, direction) {
   if (!car) return
 
-  let isLeft = Math.random() < .7
+  let isLeft = Math.random() < .4
   if (direction) {
     isLeft = direction === 'left'
     car.wantsToTurn = direction
@@ -414,6 +416,10 @@ function makeTurn(car, direction) {
   car.isMakingTurn = true
   car.history.push(`${TICKS} from ${car.laneKey} to ${newLaneKey}`)
   car.wantsToTurn = undefined
+  car.turnedRecently = true
+
+  setTimeout(() => car.turnedRecently = false, 1500)
+
   let timerId = setInterval(() => {
     car.xx += dx
     let isDone = Math.abs(car.xx - LANES_X[newLaneKey]) < 8
@@ -443,7 +449,7 @@ function sortLane(lane) {
 function isSafe(car, newLaneKey) {
   for (let otherCar of LANES[newLaneKey]) {
     let distance = Math.abs(car.yy - otherCar.yy)
-    if (distance < MIN_DISTANCE * 1.2) {
+    if (distance < MIN_DISTANCE) {
       return false
     }
   }
@@ -472,4 +478,10 @@ function reverse() {
 function displaySpeed() {
   let speed = document.getElementById('speed')
   speed.textContent = DRIVING.speed + ' MPH'
+}
+
+function honk() {
+  let audio = document.createElement('audio')
+  audio.src = 'horn.wav'
+  audio.play()
 }
