@@ -3,7 +3,7 @@ let TICKS = 0
 let IS_PLAYING = false
 let CAR_COUNT = 1
 
-let DRIVING = null
+let DRIVER = null
 
 import * as Constants from './config.js'
 import Car from './car.js'
@@ -36,12 +36,16 @@ function reset(ctx) {
 }
 
 function setDriver(ctx) {
-  if (DRIVING) DRIVING.isDriving = false
-  DRIVING = LANES[1][LANES[1].length - 1]
-  DRIVING.isDriving = true
-  DRIVING.wasEverDriven = true
-  DRIVING.personality = 'player'
+  if (DRIVER) DRIVER.isDriving = false
+  DRIVER = LANES[1][LANES[1].length - 1]
+  DRIVER.isDriving = true
+  DRIVER.wasEverDriven = true
+  DRIVER.personality = 'player'
   draw(ctx)
+
+  let stone = LANES[0][0]
+  stone.yy = 50
+  stone.speed = 0
 }
 
 function main() {
@@ -61,14 +65,14 @@ function main() {
     let keyCode = document.getElementById('keycode')
     keyCode.textContent = ev.which
 
-    if (ev.which === 13) honk(DRIVING)
+    if (ev.which === 13) honk(DRIVER)
     if (ev.which === 32) togglePlayback(ctx)
     if (ev.which === 9) setDriver(ctx) // TAB
     if (ev.which === 82) reverse(ctx)
     if (ev.which === 75 || ev.which === 38) speedUp(ctx) // speedup
     if (ev.which === 74 || ev.which === 40) slowDown(ctx) // slowdown
-    if (ev.which === 72 || ev.which === 37) makeTurn(DRIVING, 'left')
-    if (ev.which === 76 || ev.which === 39) makeTurn(DRIVING, 'right')
+    if (ev.which === 72 || ev.which === 37) makeTurn(DRIVER, 'left')
+    if (ev.which === 76 || ev.which === 39) makeTurn(DRIVER, 'right')
   })
   document.getElementById('playpause').addEventListener('click', () => togglePlayback(ctx))
   document.getElementById('tick').addEventListener('click', () => tick(ctx, true))
@@ -94,8 +98,8 @@ function selectCar(ctx, xx, yy) {
   car.isSpecial = !car.isSpecial
   car.isDriving = !car.isDriving
 
-  DRIVING = car
-  DRIVING.wasEverDriven = true
+  DRIVER = car
+  DRIVER.wasEverDriven = true
 
   console.log(car, car.history)
 
@@ -132,9 +136,9 @@ function draw(ctx) {
   ctx.fillRect(0, 0, Constants.WIDTH, Constants.HEIGHT)
 
   ctx.fillStyle = 'yellow'
-  ctx.fillRect(1 * Constants.WIDTH / 4, 0, 1, Constants.HEIGHT)
-  ctx.fillRect(2 * Constants.WIDTH / 4, 0, 1, Constants.HEIGHT)
-  ctx.fillRect(3 * Constants.WIDTH / 4, 0, 1, Constants.HEIGHT)
+  drawLaneStripes(ctx, 1 * Constants.WIDTH / 4)
+  drawLaneStripes(ctx, 2 * Constants.WIDTH / 4)
+  drawLaneStripes(ctx, 3 * Constants.WIDTH / 4)
 
   iterateBumperToBumper((car1, car2) => {
     drawCar(ctx, car1)
@@ -250,10 +254,10 @@ function tick(ctx, isForced) {
 
   if (totalCars() < Constants.ROAD_CAPACITY) {
     if (carsInTopRegion() < 6) {
-      let newCar = generateCar(DRIVING.yy - Constants.HEIGHT)
-      newCar.speed = DRIVING.speed * .6 + Math.random() * DRIVING.speed * .4
+      let newCar = generateCar(DRIVER.yy - Constants.HEIGHT)
+      newCar.speed = DRIVER.speed * .6 + Math.random() * DRIVER.speed * .4
     } else {
-      generateCar(DRIVING.yy + (Constants.HEIGHT - Constants.CENTER_YY))
+      generateCar(DRIVER.yy + (Constants.HEIGHT - Constants.CENTER_YY))
     }
   }   
 
@@ -274,10 +278,10 @@ function drawCar(ctx, car) {
   let xx = car.xx
   let yy = car.yy
 
-  if (car === DRIVING) {
+  if (car === DRIVER) {
     yy = Constants.CENTER_YY
   } else {
-    yy = Constants.CENTER_YY + (car.yy - DRIVING.yy)
+    yy = Constants.CENTER_YY + (car.yy - DRIVER.yy)
   }
 
   ctx.fillStyle = car.color
@@ -474,27 +478,27 @@ function isSafe(car, newLaneKey) {
 }
 
 function speedUp() {
-  if (!DRIVING) return
-  DRIVING.speed += 1
+  if (!DRIVER) return
+  DRIVER.speed += 1
   displaySpeed()
 }
 
 function slowDown() {
-  if (!DRIVING) return
-  DRIVING.speed -= 1
+  if (!DRIVER) return
+  DRIVER.speed -= 1
   displaySpeed()
 }
 
 function reverse() {
-  if (!DRIVING) return
-  DRIVING.speed *= -1
+  if (!DRIVER) return
+  DRIVER.speed *= -1
   displaySpeed()
 }
 
 
 function displaySpeed() {
   let speed = document.getElementById('speed')
-  speed.textContent = DRIVING.speed + ' MPH'
+  speed.textContent = DRIVER.speed + ' MPH'
 }
 
 function honk(fromCar) {
@@ -505,13 +509,13 @@ function honk(fromCar) {
   neighbors.forEach(car => {
     car.wasHonked = true
 
-    if (car.laneKey === DRIVING.laneKey) {
+    if (car.laneKey === DRIVER.laneKey) {
       // attempt to make a turn
       makeTurn(car, 'right')
     }
 
     if (!car.isMakingTurn) {
-      if (car.yy > DRIVING.yy) {    
+      if (car.yy > DRIVER.yy) {    
         car.speed += Math.random() * .4
       } else {
         car.speed -= Math.random() * .4
@@ -527,17 +531,25 @@ function honk(fromCar) {
 function isCarOffScreen(car) {
   // if the car is below the current car it's impossible
   // for it to be off screen
-  if (Math.abs(DRIVING.yy - car.yy) > Constants.HEIGHT) return true
-  if (car.yy > DRIVING.yy) return false
+  if (Math.abs(DRIVER.yy - car.yy) > Constants.HEIGHT) return true
+  if (car.yy > DRIVER.yy) return false
 }
 
 function carsInTopRegion() {
   let total = 0
   iterateCars(car => {
-    let distance = DRIVING.yy - car.yy
+    let distance = DRIVER.yy - car.yy
     if (distance > 500) {
       total++
     }
   })
   return total
+}
+
+function drawLaneStripes(ctx, xx) {
+  ctx.fillStyle = 'yellow'  
+
+  for (let yy = 0; yy < Constants.HEIGHT; yy += 50) {
+    ctx.fillRect(xx, yy - DRIVER.yy % 50, 2, 18)  
+  }
 }
