@@ -1,6 +1,6 @@
 let TICKS = 0
 
-let IS_PLAYING = false
+let IS_PLAYING = true
 let CAR_COUNT = 1
 
 let DRIVER = null
@@ -39,15 +39,12 @@ function reset(ctx) {
 
 function setDriver(ctx) {
   if (DRIVER) DRIVER.isDriving = false
-  DRIVER = LANES[1][LANES[1].length - 1]
+  let all = Object.values(LANES).flat()
+  DRIVER = all.reduce((car1, car2) => car1.yy > car2.yy ? car1 : car2)
   DRIVER.isDriving = true
   DRIVER.wasEverDriven = true
   DRIVER.personality = 'player'
   draw(ctx)
-
-  let stone = LANES[0][0]
-  stone.yy = 50
-  stone.speed = 0
 }
 
 function main() {
@@ -231,16 +228,17 @@ function generateCar(yy) {
 }
 
 function tick(ctx, isForced) {
+  isOverlap()
+
   TICKS++
   if (!isForced && !IS_PLAYING) return
 
   if (IS_ACCELERATING) {
     DRIVER.speed += .3
-  } else if (!IS_ACCELERATING) {
+  } else if (!IS_ACCELERATING && DRIVER.speed > Constants.LOW_SPEED) {
     DRIVER.speed -= .2
   }
-  DRIVER.speed = Util.clamp(Constants.LOW_SPEED, DRIVER.speed, Constants.MAX_SPEED)
-  console.log('driver speed', DRIVER.speed)
+  DRIVER.speed = Util.clamp(0, DRIVER.speed, Constants.MAX_SPEED)
   displaySpeed()
 
   iterateBumperToBumper((car1, car2) => {
@@ -256,8 +254,7 @@ function tick(ctx, isForced) {
       // is the car so close to another it should break?
       let distance = Math.abs(car1.yy - car2.yy)
   
-      if (distance < Constants.MIN_DISTANCE) {
-        car1.yy = initialYY + (car2.speed / Constants.SPEED_FACTOR)
+      if (car1.yy > car2.yy && distance < Constants.MIN_DISTANCE) {
         car1.speed = car2.speed
 
         car1.isBraking = true
@@ -271,10 +268,7 @@ function tick(ctx, isForced) {
         setTimeout(() => {
           car1.isDisplayingBradking = false
         }, 600)
-  
-        car2.yy += 1
       }
-    // prevent cars that have been driven from making autonomous lane changes again
     }
   })
 
@@ -314,7 +308,7 @@ function drawCar(ctx, car) {
   ctx.fillRect(xx - 10, yy, Constants.CAR_WIDTH, Constants.CAR_HEIGHT)
 
   ctx.fillStyle = 'black'
-  ctx.fillText('' + car.number + '\n' + car.laneKey, xx + 10, yy)
+  ctx.fillText('' + car.number + '\n' + Math.round(car.speed), xx + 10, yy)
 
   ctx.fillStyle = 'rgb(34,192,240)'
   ctx.fillRect(xx - Constants.CAR_WIDTH / 2 + 2, yy + 2, Constants.CAR_WIDTH - 4, 6)
@@ -505,14 +499,14 @@ function isSafe(car, newLaneKey) {
 function speedUp() {
   if (!DRIVER) return
   DRIVER.speed += 1
-  DRIVER.speed = Util.clamp(Constants.LOW_SPEED, DRIVER.speed, Constants.MAX_SPEED)
+  DRIVER.speed = Util.clamp(0, DRIVER.speed, Constants.MAX_SPEED)
   displaySpeed()
 }
 
 function slowDown() {
   if (!DRIVER) return
   DRIVER.speed -= 1
-  DRIVER.speed = Util.clamp(Constants.LOW_SPEED, DRIVER.speed, Constants.MAX_SPEED)
+  DRIVER.speed = Util.clamp(0, DRIVER.speed, Constants.MAX_SPEED)
   displaySpeed()
 }
 
@@ -578,5 +572,20 @@ function drawLaneStripes(ctx, xx) {
 
   for (let yy = -100; yy < Constants.HEIGHT + 100; yy += 50) {
     ctx.fillRect(xx, yy - DRIVER.yy % 50, 2, 18)  
+  }
+}
+
+function isOverlap() {
+  let all = Object.values(LANES).flat()
+  for (let car1 of all) {
+    for (let car2 of all) {
+      let dx = Math.abs(car1.xx - car2.xx)
+      let dy = Math.abs(car1.yy - car2.yy)
+
+      if (car1 !== car2 && (dx < Constants.CAR_WIDTH && dy < Constants.CAR_HEIGHT)) {
+        console.log('overlap', car1.number, car2.number, {dx,dy}, car1, car2)
+        debugger
+      }
+    }
   }
 }

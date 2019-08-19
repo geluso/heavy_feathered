@@ -15,7 +15,7 @@ export const LANES_X = [
 
 export const CAR_WIDTH = 20
 export const CAR_HEIGHT = 30
-export const MIN_DISTANCE = CAR_HEIGHT + 8
+export const MIN_DISTANCE = CAR_HEIGHT + 16
 
 export const SPEED_FACTOR = 15
 export const MIN_SPEED = 0
