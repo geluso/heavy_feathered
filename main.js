@@ -16,9 +16,11 @@ for (let i = 0; i < Constants.NUM_LANES; i++) {
   LANES[i] = []
 }
 
+let CTX = null
+
 document.addEventListener('DOMContentLoaded', main)
 
-function reset(ctx) {
+function reset() {
   LANES = {}
   for (let i = 0; i < Constants.NUM_LANES; i++) {
     LANES[i] = []
@@ -33,31 +35,31 @@ function reset(ctx) {
     sortLane(lane)
   })
 
-  setDriver(ctx)
-  tick(ctx, true);
+  setDriver()
+  tick(true);
 }
 
-function setDriver(ctx) {
+function setDriver() {
   if (DRIVER) DRIVER.isDriving = false
   let all = Object.values(LANES).flat()
   DRIVER = all.reduce((car1, car2) => car1.yy > car2.yy ? car1 : car2)
   DRIVER.isDriving = true
   DRIVER.wasEverDriven = true
   DRIVER.personality = 'player'
-  draw(ctx)
+  draw()
 }
 
 function main() {
   let canvas = document.getElementById('glass')
-  let ctx = canvas.getContext('2d')
+  CTX = canvas.getContext('2d')
 
   canvas.width = Constants.WIDTH
   canvas.height = Constants.HEIGHT
 
-  ctx.width = Constants.WIDTH
-  ctx.height = Constants.HEIGHT
+  CTX.width = Constants.WIDTH
+  CTX.height = Constants.HEIGHT
 
-  reset(ctx)
+  reset()
 
   document.addEventListener('keydown', (ev) => {
     KEYBOARD[ev.which] = true
@@ -80,31 +82,33 @@ function main() {
     keyCode.textContent = ev.which
 
     if (ev.which === 13) honk(DRIVER)
-    if (ev.which === 32) togglePlayback(ctx)
-    if (ev.which === 9) setDriver(ctx) // TAB
-    if (ev.which === 82) reverse(ctx)
-    if (ev.which === 75 || ev.which === 38) speedUp(ctx) // speedup
-    if (ev.which === 74 || ev.which === 40) slowDown(ctx) // slowdown
+    if (ev.which === 32) togglePlayback()
+    if (ev.which === 9) setDriver() // TAB
+    if (ev.which === 82) reverse()
+    if (ev.which === 75 || ev.which === 38) speedUp() // speedup
+    if (ev.which === 74 || ev.which === 40) slowDown() // slowdown
     if (ev.which === 72 || ev.which === 37) makeTurn(DRIVER, 'left')
     if (ev.which === 76 || ev.which === 39) makeTurn(DRIVER, 'right')
   })
-  document.getElementById('playpause').addEventListener('click', () => togglePlayback(ctx))
-  document.getElementById('tick').addEventListener('click', () => tick(ctx, true))
-  document.addEventListener('mousedown', ev => click(ev, ctx))
+  document.getElementById('playpause').addEventListener('click', () => togglePlayback())
+  document.getElementById('tick').addEventListener('click', () => tick(true))
+  document.getElementById('prev').addEventListener('click', prevHistory)
+  document.getElementById('next').addEventListener('click', nextHistory)
+  document.addEventListener('mousedown', ev => click(ev))
 
 
   if (Constants.ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
-  setInterval(() => tick(ctx), 1000 / 60)
+  setInterval(() => tick(), 1000 / 60)
 }
 
-function click(ev, ctx) {
+function click(ev) {
   const rect = ev.target.getBoundingClientRect();
   const xx = ev.clientX - rect.left;
   const yy = ev.clientY - rect.top;
-  selectCar(ctx, xx, yy)
+  selectCar(xx, yy)
 }
 
-function selectCar(ctx, xx, yy) {
+function selectCar(xx, yy) {
   let {car, distance} = getClosestCar(xx, yy)
   if (!car) return
   if (distance > Constants.CAR_HEIGHT) return
@@ -117,7 +121,7 @@ function selectCar(ctx, xx, yy) {
 
   console.log(car, car.history)
 
-  draw(ctx, true)
+  draw(true)
 }
 
 function getClosestCar(xx, yy) {
@@ -141,30 +145,30 @@ function getNearbyCars(car) {
   return nearby
 }
 
-function togglePlayback(ctx) {
+function togglePlayback() {
   IS_PLAYING = !IS_PLAYING
 }
 
-function draw(ctx) {
-  ctx.fillStyle = 'gray'
-  ctx.fillRect(0, 0, Constants.WIDTH, Constants.HEIGHT)
+function draw() {
+  CTX.fillStyle = 'gray'
+  CTX.fillRect(0, 0, Constants.WIDTH, Constants.HEIGHT)
 
-  ctx.fillStyle = 'yellow'
-  drawLaneStripes(ctx, 1 * Constants.WIDTH / 4)
-  drawLaneStripes(ctx, 2 * Constants.WIDTH / 4)
-  drawLaneStripes(ctx, 3 * Constants.WIDTH / 4)
+  CTX.fillStyle = 'yellow'
+  drawLaneStripes(1 * Constants.WIDTH / 4)
+  drawLaneStripes(2 * Constants.WIDTH / 4)
+  drawLaneStripes(3 * Constants.WIDTH / 4)
 
   iterateBumperToBumper((car1, car2) => {
-    drawCar(ctx, car1)
+    drawCar(car1)
   })
 
   iterateBumperToBumper((car1, car2) => {
     if (car1.isSpecial) {
-      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
-      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
-      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey + 1], 'forward'))
-      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey - 1], 'backward'))
-      drawChain(ctx, car1, closestCar(car1, LANES[car1.laneKey + 1], 'backward'))
+      drawChain(car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
+      drawChain(car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
+      drawChain(car1, closestCar(car1, LANES[car1.laneKey + 1], 'forward'))
+      drawChain(car1, closestCar(car1, LANES[car1.laneKey - 1], 'backward'))
+      drawChain(car1, closestCar(car1, LANES[car1.laneKey + 1], 'backward'))
     }
   })
 }
@@ -197,16 +201,16 @@ function closestCar(car, lane, direction) {
   return closest
 }
 
-function drawChain(ctx, car1, car2) {
+function drawChain(car1, car2) {
   if (!car2) return
 
-  ctx.strokeStyle = car1.color
-  ctx.fillStyle = car1.color
-  ctx.beginPath()
-  ctx.moveTo(car1.xx, car1.yy)
-  ctx.lineTo(car2.xx, car2.yy)
-  ctx.closePath()
-  ctx.stroke()
+  CTX.strokeStyle = car1.color
+  CTX.fillStyle = car1.color
+  CTX.beginPath()
+  CTX.moveTo(car1.xx, car1.yy)
+  CTX.lineTo(car2.xx, car2.yy)
+  CTX.closePath()
+  CTX.stroke()
 }
 
 function generateCar(yy) {
@@ -227,7 +231,9 @@ function generateCar(yy) {
   return car
 }
 
-function tick(ctx, isForced) {
+function tick(isForced) {
+  if (!IS_PLAYING) return 
+
   isOverlap()
 
   TICKS++
@@ -258,7 +264,7 @@ function tick(ctx, isForced) {
         car1.speed = car2.speed
 
         car1.isBraking = true
-        car1.isDisplayingBradking = true
+        car1.isDisplayingBraking = true
 
         if (car1.wasHonked) {
           setTimeout(() => honk(car1), Math.random() * Constants.HONK_DELAY_MIN + Constants.HONK_DELAY_RANGE)
@@ -266,7 +272,7 @@ function tick(ctx, isForced) {
         }
 
         setTimeout(() => {
-          car1.isDisplayingBradking = false
+          car1.isDisplayingBraking = false
         }, 600)
       }
     }
@@ -279,13 +285,21 @@ function tick(ctx, isForced) {
     } else {
       generateCar(DRIVER.yy + (Constants.HEIGHT - Constants.CENTER_YY))
     }
+
+    iterateOverCarsLaneByLane((lane, key) => {
+      dedupeLane(key)
+      sortLane(lane)
+    })
   }   
 
   filterCars(car => {
     return !car.isToBeDeleted
   }) 
 
-  draw(ctx)
+  if (IS_HISTORY_ENABLED) {
+    save()
+  }
+  draw()
 }
 
 function randomWalk() {
@@ -294,7 +308,7 @@ function randomWalk() {
   Constants.ROAD_CAPACITY = Math.max(1, Constants.ROAD_CAPACITY + upOrDown * scale)
 }
 
-function drawCar(ctx, car) {
+function drawCar(car) {
   let xx = car.xx
   let yy = car.yy
 
@@ -304,44 +318,44 @@ function drawCar(ctx, car) {
     yy = Constants.CENTER_YY + (car.yy - DRIVER.yy)
   }
 
-  ctx.fillStyle = car.color
-  ctx.fillRect(xx - 10, yy, Constants.CAR_WIDTH, Constants.CAR_HEIGHT)
+  CTX.fillStyle = car.color
+  CTX.fillRect(xx - 10, yy, Constants.CAR_WIDTH, Constants.CAR_HEIGHT)
 
-  ctx.fillStyle = 'black'
-  ctx.fillText('' + car.number + '\n' + Math.round(car.speed), xx + 10, yy)
+  CTX.fillStyle = 'black'
+  CTX.fillText('' + car.number + '\n' + Math.round(car.speed), xx + 10, yy)
 
-  ctx.fillStyle = 'rgb(34,192,240)'
-  ctx.fillRect(xx - Constants.CAR_WIDTH / 2 + 2, yy + 2, Constants.CAR_WIDTH - 4, 6)
+  CTX.fillStyle = 'rgb(34,192,240)'
+  CTX.fillRect(xx - Constants.CAR_WIDTH / 2 + 2, yy + 2, Constants.CAR_WIDTH - 4, 6)
 
   // left headlight
-  ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
-  ctx.beginPath()
-  ctx.moveTo(xx - Constants.CAR_WIDTH / 2 + 4, yy + 4)
-  ctx.lineTo(xx - Constants.CAR_WIDTH / 2 + 4 - 5, yy - 10 + 4)
-  ctx.lineTo(xx - Constants.CAR_WIDTH / 2 + 4 + 5, yy - 10 + 4)
-  ctx.closePath()
-  ctx.fill()
+  CTX.fillStyle = car.isSpecial ? 'yellow' : 'white'
+  CTX.beginPath()
+  CTX.moveTo(xx - Constants.CAR_WIDTH / 2 + 4, yy + 4)
+  CTX.lineTo(xx - Constants.CAR_WIDTH / 2 + 4 - 5, yy - 10 + 4)
+  CTX.lineTo(xx - Constants.CAR_WIDTH / 2 + 4 + 5, yy - 10 + 4)
+  CTX.closePath()
+  CTX.fill()
 
   // right headlight
-  ctx.fillStyle = car.isSpecial ? 'yellow' : 'white'
-  ctx.beginPath()
-  ctx.moveTo(xx + Constants.CAR_WIDTH / 2 - 4, yy + 4)
-  ctx.lineTo(xx + Constants.CAR_WIDTH / 2 - 4 - 5, yy - 10 + 4)
-  ctx.lineTo(xx + Constants.CAR_WIDTH / 2 - 4 + 5, yy - 10 + 4)
-  ctx.closePath()
-  ctx.fill()
+  CTX.fillStyle = car.isSpecial ? 'yellow' : 'white'
+  CTX.beginPath()
+  CTX.moveTo(xx + Constants.CAR_WIDTH / 2 - 4, yy + 4)
+  CTX.lineTo(xx + Constants.CAR_WIDTH / 2 - 4 - 5, yy - 10 + 4)
+  CTX.lineTo(xx + Constants.CAR_WIDTH / 2 - 4 + 5, yy - 10 + 4)
+  CTX.closePath()
+  CTX.fill()
 
   if (car.isBraking || car.isDisplayingBradking) {
-    ctx.fillStyle = 'red'
-    ctx.fillRect(xx - Constants.CAR_WIDTH / 2,                yy + Constants.CAR_HEIGHT - 3, 3, 3)
-    ctx.fillRect(xx - Constants.CAR_WIDTH / 2+ Constants.CAR_WIDTH - 3, yy + Constants.CAR_HEIGHT - 3, 3, 3)
+    CTX.fillStyle = 'red'
+    CTX.fillRect(xx - Constants.CAR_WIDTH / 2,                yy + Constants.CAR_HEIGHT - 3, 3, 3)
+    CTX.fillRect(xx - Constants.CAR_WIDTH / 2+ Constants.CAR_WIDTH - 3, yy + Constants.CAR_HEIGHT - 3, 3, 3)
   }
 
   if (car.isDriving) {
-    ctx.strokeStyle = 'yellow'
-    ctx.beginPath();
-    ctx.arc(xx, yy + Constants.CAR_HEIGHT / 2, Constants.CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
-    ctx.stroke();
+    CTX.strokeStyle = 'yellow'
+    CTX.beginPath();
+    CTX.arc(xx, yy + Constants.CAR_HEIGHT / 2, Constants.CAR_HEIGHT * 1.2, 0, 2 * Math.PI);
+    CTX.stroke();
   }
 }
 
@@ -567,11 +581,11 @@ function carsInTopRegion() {
   return total
 }
 
-function drawLaneStripes(ctx, xx) {
-  ctx.fillStyle = 'yellow'  
+function drawLaneStripes(xx) {
+  CTX.fillStyle = 'yellow'  
 
   for (let yy = -100; yy < Constants.HEIGHT + 100; yy += 50) {
-    ctx.fillRect(xx, yy - DRIVER.yy % 50, 2, 18)  
+    CTX.fillRect(xx, yy - DRIVER.yy % 50, 2, 18)  
   }
 }
 
@@ -584,8 +598,44 @@ function isOverlap() {
 
       if (car1 !== car2 && (dx < Constants.CAR_WIDTH && dy < Constants.CAR_HEIGHT)) {
         console.log('overlap', car1.number, car2.number, {dx,dy}, car1, car2)
-        debugger
       }
     }
   }
+}
+
+let IS_HISTORY = false
+let HISTORY = []
+let HISTORY_INDEX = 0
+
+function save() {
+  HISTORY.push(JSON.stringify(LANES))
+  HISTORY_INDEX = HISTORY.length - 1
+  document.getElementById('history-point').textContent = '@' + HISTORY_INDEX 
+}
+
+
+function prevHistory() {
+  HISTORY_INDEX = Math.max(HISTORY_INDEX - 1, 0)
+  seeHistory()
+}
+
+function nextHistory() {
+  HISTORY_INDEX = Math.min(HISTORY_INDEX + 1, HISTORY.length - 1)
+  seeHistory()
+}
+
+function seeHistory() {
+  LANES = JSON.parse(HISTORY[HISTORY_INDEX])
+  for (let i = 0; i < Constants.NUM_LANES; i++) {
+    LANES[i] = LANES[i].map(car => {
+      let cc = new Car()
+      for (let prop in car) {
+        cc[prop] = car[prop]
+      }
+      return cc
+    })
+  }
+  
+  document.getElementById('history-point').textContent = '@' + HISTORY_INDEX 
+  draw()
 }

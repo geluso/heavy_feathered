@@ -17,9 +17,13 @@ export default class Car {
     if (this.personality === 'aggressive') {
       if (this.isBraking) {
         this.wantsToTurn = true
-      } else {
-        this.speed += 1
+      } else if (this.speed < Constants.MAX_SPEED) {
+        this.speed++
       }
+    }
+
+    if (this.speed < Constants.LOW_SPEED) {
+      this.speed += 1
     }
   
     this.isBraking = false
