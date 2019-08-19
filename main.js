@@ -4,10 +4,12 @@ let IS_PLAYING = false
 let CAR_COUNT = 1
 
 let DRIVER = null
+let IS_ACCELERATING = false
+let KEYBOARD = {}
 
 import * as Constants from './config.js'
 import Car from './car.js'
-import Util from './util.js'
+import * as Util from './util.js'
 
 let LANES = {}
 for (let i = 0; i < Constants.NUM_LANES; i++) {
@@ -43,8 +45,6 @@ function setDriver(ctx) {
   DRIVER.personality = 'player'
   draw(ctx)
 
-  console.log(DRIVER.speed)
-
   let stone = LANES[0][0]
   stone.yy = 50
   stone.speed = 0
@@ -61,6 +61,21 @@ function main() {
   ctx.height = Constants.HEIGHT
 
   reset(ctx)
+
+  document.addEventListener('keydown', (ev) => {
+    KEYBOARD[ev.which] = true
+    if (ev.which === 75 || ev.which === 38) {
+      IS_ACCELERATING = true
+    }
+  })
+
+  document.addEventListener('keyup', (ev) => {
+    KEYBOARD[ev.which] = false
+    if (ev.which === 75 || ev.which === 38) {
+      IS_ACCELERATING = false
+    }
+  })
+
   document.addEventListener('keydown', (ev) => {
     console.log('key', ev.which)
 
@@ -219,12 +234,18 @@ function tick(ctx, isForced) {
   TICKS++
   if (!isForced && !IS_PLAYING) return
 
+  if (IS_ACCELERATING) {
+    DRIVER.speed += .3
+  } else if (!IS_ACCELERATING) {
+    DRIVER.speed -= .2
+  }
+  DRIVER.speed = Util.clamp(Constants.LOW_SPEED, DRIVER.speed, Constants.MAX_SPEED)
+  console.log('driver speed', DRIVER.speed)
+  displaySpeed()
+
   iterateBumperToBumper((car1, car2) => {
     let initialYY = car1.yy
     car1.tick()
-    if (car1 === DRIVER) {
-      displaySpeed()
-    }
 
     // has the car gone off the top of the screen?
     if (isCarOffScreen(car1)) {
@@ -336,7 +357,7 @@ function randomCar(yy) {
   yy = yy || Constants.HEIGHT * Math.random()
 
   // have the car drive between 55-80 MPH scaled to where 10 represents 60 MPH
-  let spread = Constants.MAX_SPEED - Constants.MIN_SPEED
+  let spread = Constants.MAX_INITIAL_SPEED - Constants.MIN_SPEED
   let speed = Constants.MIN_SPEED + (spread) * Math.random()
 
   let rr = Math.floor(255 * Math.random())
@@ -484,12 +505,14 @@ function isSafe(car, newLaneKey) {
 function speedUp() {
   if (!DRIVER) return
   DRIVER.speed += 1
+  DRIVER.speed = Util.clamp(Constants.LOW_SPEED, DRIVER.speed, Constants.MAX_SPEED)
   displaySpeed()
 }
 
 function slowDown() {
   if (!DRIVER) return
   DRIVER.speed -= 1
+  DRIVER.speed = Util.clamp(Constants.LOW_SPEED, DRIVER.speed, Constants.MAX_SPEED)
   displaySpeed()
 }
 
@@ -502,7 +525,7 @@ function reverse() {
 
 function displaySpeed() {
   let speed = document.getElementById('speed')
-  speed.textContent = DRIVER.speed + ' MPH'
+  speed.textContent = Math.round(DRIVER.speed) + ' MPH'
 }
 
 function honk(fromCar) {
