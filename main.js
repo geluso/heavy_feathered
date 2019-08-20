@@ -603,7 +603,7 @@ function isOverlap() {
   }
 }
 
-let IS_HISTORY = false
+let IS_HISTORY_ENABLED = false
 let HISTORY = []
 let HISTORY_INDEX = 0
 
