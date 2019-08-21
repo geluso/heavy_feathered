@@ -95,6 +95,7 @@ function main() {
   document.getElementById('prev').addEventListener('click', prevHistory)
   document.getElementById('next').addEventListener('click', nextHistory)
   document.addEventListener('mousedown', ev => click(ev))
+  document.addEventListener('mouseup', () => IS_ACCELERATING = false)
 
 
   if (Constants.ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
@@ -105,6 +106,18 @@ function click(ev) {
   const rect = ev.target.getBoundingClientRect();
   const xx = ev.clientX - rect.left;
   const yy = ev.clientY - rect.top;
+  console.log('rect', xx, yy, rect)
+
+  if (yy < 620) {
+    IS_ACCELERATING = true
+  }
+
+  if (xx < rect.width / 3) {
+    makeTurn(DRIVER, 'left')
+  } else if (xx > 2 * rect.width / 3) {
+    makeTurn(DRIVER, 'right')
+  }
+
   selectCar(xx, yy)
 }
 
@@ -233,8 +246,7 @@ function generateCar(yy) {
 
 function tick(isForced) {
   if (!IS_PLAYING) return 
-
-  isOverlap()
+  if (Constants.IS_CHECKING_FOR_OVERLAPS) isOverlap()
 
   TICKS++
   if (!isForced && !IS_PLAYING) return

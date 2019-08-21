@@ -34,4 +34,4 @@ export let ROAD_CAPACITY = 26
 export const ENABLE_RANDOM_WALK = false
 export const HONK_RADIUS = CAR_HEIGHT * 5
 
-
+export const IS_CHECKING_FOR_OVERLAPS = false
