@@ -1,6 +1,7 @@
 let TICKS = 0
 
 let IS_PLAYING = true
+let IS_DRAWING_PROXIMITY_MESH = false
 let CAR_COUNT = 1
 
 let DRIVER = null
@@ -84,6 +85,7 @@ function main() {
     if (ev.which === 32) honk(DRIVER)
     if (ev.which === 9) setDriver() // TAB
     if (ev.which === 82) reverse()
+    if (ev.which === 88) IS_DRAWING_PROXIMITY_MESH = !IS_DRAWING_PROXIMITY_MESH
     if (ev.which === 75 || ev.which === 38 || ev.which === 87) speedUp() // speedup
     if (ev.which === 74 || ev.which === 40 || ev.which === 83) slowDown() // slowdown
     if (ev.which === 72 || ev.which === 37 || ev.which === 65) makeTurn(DRIVER, 'left')
@@ -175,7 +177,7 @@ function draw() {
   })
 
   iterateBumperToBumper((car1, car2) => {
-    if (true || car1.isSpecial) {
+    if (IS_DRAWING_PROXIMITY_MESH || car1.isSpecial) {
       drawChain(car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
       drawChain(car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
       drawChain(car1, closestCar(car1, LANES[car1.laneKey + 1], 'forward'))
@@ -216,11 +218,15 @@ function closestCar(car, lane, direction) {
 function drawChain(car1, car2) {
   if (!car2) return
 
+
+  let yy1 = Constants.CENTER_YY + (car1.yy - DRIVER.yy)
+  let yy2 = Constants.CENTER_YY + (car2.yy - DRIVER.yy)
+
   CTX.strokeStyle = car1.color
   CTX.fillStyle = car1.color
   CTX.beginPath()
-  CTX.moveTo(car1.xx, car1.yy)
-  CTX.lineTo(car2.xx, car2.yy)
+  CTX.moveTo(car1.xx, yy1)
+  CTX.lineTo(car2.xx, yy2)
   CTX.closePath()
   CTX.stroke()
 }
