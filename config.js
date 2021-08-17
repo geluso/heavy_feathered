@@ -20,7 +20,7 @@ export const MIN_DISTANCE = CAR_HEIGHT + 16
 export const SPEED_FACTOR = 15
 export const MIN_SPEED = 0
 export const LOW_SPEED = 50
-export const MAX_SPEED = 120
+export const MAX_SPEED = 180
 export const MIN_INITIAL_SPEED = 50
 export const MAX_INITIAL_SPEED = 82
 
@@ -32,6 +32,6 @@ export const CENTER_YY = 600
 
 export let ROAD_CAPACITY = 26
 export const ENABLE_RANDOM_WALK = false
-export const HONK_RADIUS = CAR_HEIGHT * 5
+export const HONK_RADIUS = CAR_HEIGHT * 7
 
 export const IS_CHECKING_FOR_OVERLAPS = false
