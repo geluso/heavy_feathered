@@ -8,6 +8,11 @@ let DRIVER = null
 let IS_ACCELERATING = false
 let KEYBOARD = {}
 
+let IS_MOUSE_DOWN = false;
+let SELECTED_CAR = false;
+let MOUSE_XX = 0;
+let MOUSE_YY = 0;
+
 import * as Constants from './config.js'
 import Car from './car.js'
 import * as Util from './util.js'
@@ -95,8 +100,9 @@ function main() {
   document.getElementById('tick').addEventListener('click', () => tick(true))
   document.getElementById('prev').addEventListener('click', prevHistory)
   document.getElementById('next').addEventListener('click', nextHistory)
-  document.addEventListener('mousedown', ev => click(ev))
-  document.addEventListener('mouseup', () => IS_ACCELERATING = false)
+  document.addEventListener('mousedown', click)
+  document.addEventListener('mousemove', drag)
+  document.addEventListener('mouseup', release)
 
 
   if (Constants.ENABLE_RANDOM_WALK) setInterval(randomWalk, 1000) 
@@ -104,34 +110,58 @@ function main() {
 }
 
 function click(ev) {
+  IS_MOUSE_DOWN = true;
+
   const rect = ev.target.getBoundingClientRect();
   const xx = ev.clientX - rect.left;
   const yy = ev.clientY - rect.top;
   console.log('rect', xx, yy, rect)
 
-  if (yy < 620) {
-    IS_ACCELERATING = true
-  }
-
-  if (xx < rect.width / 3) {
-    makeTurn(DRIVER, 'left')
-  } else if (xx > 2 * rect.width / 3) {
-    makeTurn(DRIVER, 'right')
-  }
+  MOUSE_XX = ev.clientX - rect.left;
+  MOUSE_YY = ev.clientY - rect.top;
 
   selectCar(xx, yy)
 }
 
+function drag(ev) {
+  if (!IS_MOUSE_DOWN) return console.log('mouse not down');
+  if (!SELECTED_CAR) return console.log('car not selected');
+
+  const rect = ev.target.getBoundingClientRect();
+  MOUSE_XX = ev.clientX - rect.left;
+  MOUSE_YY = ev.clientY - rect.top;
+  console.log("line to")
+  drawLiner()
+}
+
+function drawLiner() {
+  const carYY = Constants.CENTER_YY + (SELECTED_CAR.yy - DRIVER.yy)
+  CTX.strokeStyle = SELECTED_CAR.color;
+  CTX.fillStyle = SELECTED_CAR.color;
+  CTX.beginPath();
+  CTX.moveTo(SELECTED_CAR.xx, carYY);
+  CTX.lineTo(MOUSE_XX, MOUSE_YY);
+  CTX.closePath();
+  CTX.stroke();
+}
+
+function release(ev) {
+  IS_MOUSE_DOWN = false;
+  SELECTED_CAR = false;
+  IS_ACCELERATING = false;
+
+  const rect = ev.target.getBoundingClientRect();
+  const xx = ev.clientX - rect.left;
+  const yy = ev.clientY - rect.top;
+}
+
 function selectCar(xx, yy) {
   let {car, distance} = getClosestCar(xx, yy)
+  console.log(car, distance)
   if (!car) return
-  if (distance > Constants.CAR_HEIGHT) return
+  if (distance > Constants.CAR_HEIGHT) return console.log("dist > HEIGHT", distance)
 
-  car.isSpecial = !car.isSpecial
-  car.isDriving = !car.isDriving
-
-  DRIVER = car
-  DRIVER.wasEverDriven = true
+  SELECTED_CAR = car
 
   console.log(car, car.history)
 
@@ -142,7 +172,9 @@ function getClosestCar(xx, yy) {
   let minDistance = null
   let closestCar = null
   iterateCars(car => {
-    let distance = Util.distance(xx, yy, car.xx, car.yy)
+    let yy1 = Constants.CENTER_YY + (car.yy - DRIVER.yy)
+    console.log(xx, yy, car.xx, yy1)
+    let distance = Util.distance(xx, yy, car.xx, yy1)
     if (!minDistance || distance < minDistance) {
       minDistance = distance
       closestCar = car
@@ -221,6 +253,10 @@ function drawChain(car1, car2) {
 
   let yy1 = Constants.CENTER_YY + (car1.yy - DRIVER.yy)
   let yy2 = Constants.CENTER_YY + (car2.yy - DRIVER.yy)
+
+  if (Math.abs(yy1 - yy2) > 4 * Constants.CAR_HEIGHT) {
+    return
+  }
 
   CTX.strokeStyle = car1.color
   CTX.fillStyle = car1.color
@@ -604,6 +640,7 @@ function drawLaneStripes(xx) {
   for (let yy = -100; yy < Constants.HEIGHT + 100; yy += 50) {
     CTX.fillRect(xx, yy - DRIVER.yy % 50, 2, 18)  
   }
+  drawLiner()
 }
 
 function isOverlap() {
