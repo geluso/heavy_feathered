@@ -81,14 +81,13 @@ function main() {
     let keyCode = document.getElementById('keycode')
     keyCode.textContent = ev.which
 
-    if (ev.which === 13) honk(DRIVER)
-    if (ev.which === 32) togglePlayback()
+    if (ev.which === 32) honk(DRIVER)
     if (ev.which === 9) setDriver() // TAB
     if (ev.which === 82) reverse()
-    if (ev.which === 75 || ev.which === 38) speedUp() // speedup
-    if (ev.which === 74 || ev.which === 40) slowDown() // slowdown
-    if (ev.which === 72 || ev.which === 37) makeTurn(DRIVER, 'left')
-    if (ev.which === 76 || ev.which === 39) makeTurn(DRIVER, 'right')
+    if (ev.which === 75 || ev.which === 38 || ev.which === 87) speedUp() // speedup
+    if (ev.which === 74 || ev.which === 40 || ev.which === 83) slowDown() // slowdown
+    if (ev.which === 72 || ev.which === 37 || ev.which === 65) makeTurn(DRIVER, 'left')
+    if (ev.which === 76 || ev.which === 39 || ev.which === 68) makeTurn(DRIVER, 'right')
   })
   document.getElementById('playpause').addEventListener('click', () => togglePlayback())
   document.getElementById('tick').addEventListener('click', () => tick(true))
@@ -176,7 +175,7 @@ function draw() {
   })
 
   iterateBumperToBumper((car1, car2) => {
-    if (car1.isSpecial) {
+    if (true || car1.isSpecial) {
       drawChain(car1, closestCar(car1, LANES[car1.laneKey], 'forward'))
       drawChain(car1, closestCar(car1, LANES[car1.laneKey - 1], 'forward'))
       drawChain(car1, closestCar(car1, LANES[car1.laneKey + 1], 'forward'))
