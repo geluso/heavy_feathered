@@ -22,8 +22,12 @@ export default class Car {
       }
     }
 
-    if (this.speed < Constants.LOW_SPEED) {
+    if (this.isAccelerating || this.speed < Constants.LOW_SPEED) {
       this.speed += 1
+    }
+
+    if (this.isDecelerating) {
+      this.speed -= 1
     }
   
     this.isBraking = false

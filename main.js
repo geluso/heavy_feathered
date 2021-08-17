@@ -6,12 +6,18 @@ let CAR_COUNT = 1
 
 let DRIVER = null
 let IS_ACCELERATING = false
+let IS_PLAYER_ACCELERATING = true
 let KEYBOARD = {}
 
 let IS_MOUSE_DOWN = false;
 let SELECTED_CAR = false;
 let MOUSE_XX = 0;
 let MOUSE_YY = 0;
+
+let AUDIO_CONTEXT = false
+let TONE = false
+let IS_TONE_STARTED = false
+let IS_MUTED = false
 
 import * as Constants from './config.js'
 import Car from './car.js'
@@ -67,6 +73,9 @@ function main() {
 
   reset()
 
+  AUDIO_CONTEXT = new (window.AudioContext || window.webkitAudioContext)();
+  createTone()
+
   document.addEventListener('keydown', (ev) => {
     KEYBOARD[ev.which] = true
     if (ev.which === 75 || ev.which === 38) {
@@ -75,6 +84,7 @@ function main() {
   })
 
   document.addEventListener('keyup', (ev) => {
+    IS_PLAYER_ACCELERATING = false
     KEYBOARD[ev.which] = false
     if (ev.which === 75 || ev.which === 38) {
       IS_ACCELERATING = false
@@ -91,6 +101,7 @@ function main() {
     if (ev.which === 9) setDriver() // TAB
     if (ev.which === 82) reverse()
     if (ev.which === 88) IS_DRAWING_PROXIMITY_MESH = !IS_DRAWING_PROXIMITY_MESH
+    if (ev.which === 77) toggleTone()
     if (ev.which === 75 || ev.which === 38 || ev.which === 87) speedUp() // speedup
     if (ev.which === 74 || ev.which === 40 || ev.which === 83) slowDown() // slowdown
     if (ev.which === 72 || ev.which === 37 || ev.which === 65) makeTurn(DRIVER, 'left')
@@ -146,9 +157,14 @@ function drawLiner() {
 }
 
 function release(ev) {
+  SELECTED_CAR.wantsToTurn = false
+  SELECTED_CAR.isAccelerating = false
+  SELECTED_CAR.isDecelerating = false
+
   IS_MOUSE_DOWN = false;
   SELECTED_CAR = false;
   IS_ACCELERATING = false;
+  IS_PLAYER_ACCELERATING = false;
 
   const rect = ev.target.getBoundingClientRect();
   const xx = ev.clientX - rect.left;
@@ -292,6 +308,9 @@ function tick(isForced) {
   TICKS++
   if (!isForced && !IS_PLAYING) return
 
+  heavyFeather()
+  setToneFreq()
+
   if (IS_ACCELERATING) {
     DRIVER.speed += .3
   } else if (!IS_ACCELERATING && DRIVER.speed > Constants.LOW_SPEED) {
@@ -355,6 +374,35 @@ function tick(isForced) {
   draw()
 }
 
+function heavyFeather() {
+  if (!SELECTED_CAR) return console.log('no car selected to feather')
+  
+  let xx = SELECTED_CAR.xx
+  let yy = Constants.CENTER_YY + (SELECTED_CAR.yy - DRIVER.yy)
+  let dxx = Math.abs(MOUSE_XX - xx)
+  let dyy = Math.abs(MOUSE_YY - yy)
+
+  if (dxx > Constants.CAR_WIDTH && MOUSE_XX < xx) { // left
+    console.log("left")
+    SELECTED_CAR.wantsToTurn = "left"
+  } else if (dxx > Constants.CAR_WIDTH && MOUSE_XX > xx) { // right
+    SELECTED_CAR.wantsToTurn = "right"
+  } else {
+    SELECTED_CAR.wantsToTurn = false
+  }
+  
+  if (dyy > Constants.CAR_HEIGHT && MOUSE_YY < yy) { // faster
+    console.log("faster")
+    SELECTED_CAR.isAccelerating = true
+  } else if (dyy > Constants.CAR_HEIGHT && MOUSE_YY > yy) { // slower
+    console.log("slower")
+    SELECTED_CAR.isDecelerating = true
+  } else {
+    SELECTED_CAR.isAccelerating = false
+    SELECTED_CAR.isDecelerating = false
+  }
+}
+
 function randomWalk() {
   let scale = Math.random() * Constants.SCALE
   let upOrDown = Math.random() < .5 ? 1 : -1
@@ -375,13 +423,13 @@ function drawCar(car) {
   CTX.fillRect(xx - 10, yy, Constants.CAR_WIDTH, Constants.CAR_HEIGHT)
 
   CTX.fillStyle = 'black'
-  CTX.fillText('' + car.number + '\n' + Math.round(car.speed), xx + 10, yy)
+  //CTX.fillText('' + car.number + '\n' + Math.round(car.speed), xx + 10, yy)
 
   CTX.fillStyle = 'rgb(34,192,240)'
   CTX.fillRect(xx - Constants.CAR_WIDTH / 2 + 2, yy + 2, Constants.CAR_WIDTH - 4, 6)
 
   // left headlight
-  CTX.fillStyle = car.isSpecial ? 'yellow' : 'white'
+  CTX.fillStyle = car === DRIVER ? 'yellow' : 'white'
   CTX.beginPath()
   CTX.moveTo(xx - Constants.CAR_WIDTH / 2 + 4, yy + 4)
   CTX.lineTo(xx - Constants.CAR_WIDTH / 2 + 4 - 5, yy - 10 + 4)
@@ -390,7 +438,7 @@ function drawCar(car) {
   CTX.fill()
 
   // right headlight
-  CTX.fillStyle = car.isSpecial ? 'yellow' : 'white'
+  CTX.fillStyle = car === DRIVER ? 'yellow' : 'white'
   CTX.beginPath()
   CTX.moveTo(xx + Constants.CAR_WIDTH / 2 - 4, yy + 4)
   CTX.lineTo(xx + Constants.CAR_WIDTH / 2 - 4 - 5, yy - 10 + 4)
@@ -402,6 +450,20 @@ function drawCar(car) {
     CTX.fillStyle = 'red'
     CTX.fillRect(xx - Constants.CAR_WIDTH / 2,                yy + Constants.CAR_HEIGHT - 3, 3, 3)
     CTX.fillRect(xx - Constants.CAR_WIDTH / 2+ Constants.CAR_WIDTH - 3, yy + Constants.CAR_HEIGHT - 3, 3, 3)
+  }
+
+  if (car.wantsToTurn === "left") {
+    if (TICKS % 30 < 15) {
+      CTX.fillStyle = 'yellow'
+      CTX.fillRect(xx - Constants.CAR_WIDTH / 2, yy + Constants.CAR_HEIGHT - 3, 3, 3)
+    }
+  }
+
+  if (car.wantsToTurn === "right") {
+    if (TICKS % 30 < 15) {
+      CTX.fillStyle = 'yellow'
+      CTX.fillRect(xx - Constants.CAR_WIDTH / 2 + Constants.CAR_WIDTH - 3, yy + Constants.CAR_HEIGHT - 3, 3, 3)
+    }
   }
 
   if (car.isDriving) {
@@ -563,10 +625,50 @@ function isSafe(car, newLaneKey) {
   return true
 }
 
+function toggleTone() {
+  try {
+    IS_MUTED = !IS_MUTED
+    if (IS_MUTED && TONE) {
+      TONE.stop()
+      TONE = false
+    } else {
+      createTone()
+    }
+  } finally {}
+}
+
+function createTone() {
+  // one context per document
+  TONE = AUDIO_CONTEXT.createOscillator(); // instantiate an oscillator
+  TONE.type = 'sawtooth'; // this is the default - also square, sawtooth, triangle
+
+  var gainNode = AUDIO_CONTEXT.createGain()
+  gainNode.gain.value = 0.1 // 10 %
+
+  TONE.connect(gainNode); // connect it to the destination
+  gainNode.connect(AUDIO_CONTEXT.destination); // connect it to the destination
+
+  setToneFreq()
+  TONE.start();
+}
+
+function setToneFreq() {
+  if (!TONE) return
+  TONE.frequency.value = 440 + 880 * (DRIVER.speed / Constants.MAX_SPEED); // Hz
+  TONE.frequency.value += TICKS % 7
+}
+
 function speedUp() {
+  if (!IS_TONE_STARTED) {
+    IS_TONE_STARTED = true
+    TONE.start(); // start the oscillator
+  }
+
   if (!DRIVER) return
+  IS_PLAYER_ACCELERATING = true
   DRIVER.speed += 1
   DRIVER.speed = Util.clamp(0, DRIVER.speed, Constants.MAX_SPEED)
+
   displaySpeed()
 }
 
