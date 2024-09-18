@@ -19,6 +19,9 @@ let TONE = false
 let IS_TONE_STARTED = false
 let IS_MUTED = false
 
+let LAST_GAS_TAP = 0
+let GAS_TAP_DELAY = 250
+
 import * as Constants from './config.js'
 import Car from './car.js'
 import * as Util from './util.js'
@@ -659,6 +662,14 @@ function setToneFreq() {
 }
 
 function speedUp() {
+  const now = Date.now()
+  const diff = now - LAST_GAS_TAP
+  console.log('gas tap', diff)
+  LAST_GAS_TAP = now
+  if (diff < GAS_TAP_DELAY) {
+    DRIVER.speed += 7
+  }
+  
   if (!IS_TONE_STARTED) {
     IS_TONE_STARTED = true
     TONE.start(); // start the oscillator
